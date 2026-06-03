@@ -14,7 +14,7 @@ export function startScheduler(): void {
   }
 
   cron.schedule(
-    '*/5 * * * *',
+    '*/1 * * * *',
     () => {
       void runReminderJob().catch((error) => {
         console.error('Reminder job failed:', error);
@@ -23,5 +23,9 @@ export function startScheduler(): void {
     { timezone: config.timezone },
   );
 
-  console.log(`Event reminders: cron */5 * * * * (${config.timezone}) → group ${config.telegramChatId}`);
+  void runReminderJob().catch((error) => {
+    console.error('Reminder job (startup) failed:', error);
+  });
+
+  console.log(`Event reminders: cron */1 * * * * (${config.timezone}) → group ${config.telegramChatId}`);
 }

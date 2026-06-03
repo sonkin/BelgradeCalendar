@@ -24,9 +24,10 @@ export async function clearReminderSentForEvent(eventId: string): Promise<void> 
 }
 
 export async function runReminderJob(now = new Date()): Promise<void> {
+  // Не фильтруем startsAt > now: cron раз в N минут может пропустить узкое окно
+  // (например «за 1 мин»). Просрочку отсекают dueAt и SEND_WINDOW_MS ниже.
   const events = await Event.find({
     deletedAt: null,
-    startsAt: { $gt: now },
     reminders: { $exists: true, $ne: [] },
   });
 
