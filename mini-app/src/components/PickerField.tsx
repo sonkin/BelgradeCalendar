@@ -1,8 +1,5 @@
-import { useId, useRef, type ReactNode } from 'react';
-import {
-  belgradeDateToNativeInputValue,
-  nativeInputValueToBelgradeDate,
-} from '../utils/dates';
+import { useId, useRef, useState, type ReactNode } from 'react';
+import { CalendarPopover } from './CalendarPopover';
 
 type Props = {
   label: string;
@@ -11,11 +8,13 @@ type Props = {
   children: ReactNode;
   icon: ReactNode;
   iconLabel: string;
-  onIconClick: () => void;
+  onIconClick?: () => void;
+  iconSlot?: ReactNode;
   trailing?: ReactNode;
+  popover?: ReactNode;
 };
 
-export function PickerField({
+function PickerFieldShell({
   label,
   required,
   hint,
@@ -23,12 +22,14 @@ export function PickerField({
   icon,
   iconLabel,
   onIconClick,
+  iconSlot,
   trailing,
+  popover,
 }: Props) {
   const hintId = useId();
 
   return (
-    <label className="field picker-field">
+    <div className="field picker-field">
       <span>
         {label}
         {required ? ' *' : ''}
@@ -41,31 +42,24 @@ export function PickerField({
       <div className="picker-field__control">
         {children}
         {trailing}
-        <button
-          type="button"
-          className="picker-field__icon"
-          aria-label={iconLabel}
-          onClick={onIconClick}
-        >
-          {icon}
-        </button>
+        {iconSlot ?? (
+          <button
+            type="button"
+            className="picker-field__icon"
+            aria-label={iconLabel}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onIconClick?.();
+            }}
+          >
+            {icon}
+          </button>
+        )}
+        {popover}
       </div>
-    </label>
+    </div>
   );
-}
-
-export function usePickerInputRef() {
-  return useRef<HTMLInputElement>(null);
-}
-
-export function openNativePicker(input: HTMLInputElement | null): void {
-  if (!input) return;
-  try {
-    input.showPicker?.();
-  } catch {
-    input.focus();
-    input.click();
-  }
 }
 
 function CalendarIcon() {
@@ -94,6 +88,15 @@ function ClearIcon() {
   );
 }
 
+function openNativeTimePicker(input: HTMLInputElement | null): void {
+  if (!input) return;
+  try {
+    input.showPicker?.();
+  } catch {
+    input.focus();
+  }
+}
+
 type DatePickerFieldProps = {
   label?: string;
   required?: boolean;
@@ -107,26 +110,35 @@ export function DatePickerField({
   value,
   onChange,
 }: DatePickerFieldProps) {
-  const inputRef = usePickerInputRef();
-  const nativeValue = belgradeDateToNativeInputValue(value);
+  const [open, setOpen] = useState(false);
 
   return (
-    <PickerField
+    <PickerFieldShell
       label={label}
       required={required}
       icon={<CalendarIcon />}
-      iconLabel="Выбрать дату"
-      onIconClick={() => openNativePicker(inputRef.current)}
+      iconLabel="Открыть календарь"
+      onIconClick={() => setOpen((v) => !v)}
+      popover={
+        open ? (
+          <CalendarPopover
+            value={value}
+            onChange={onChange}
+            onClose={() => setOpen(false)}
+          />
+        ) : null
+      }
     >
       <input
-        ref={inputRef}
-        type="date"
-        className="picker-field__input"
+        type="text"
+        readOnly
         required={required}
-        value={nativeValue}
-        onChange={(e) => onChange(nativeInputValueToBelgradeDate(e.target.value))}
+        className="picker-field__input"
+        placeholder="дд.мм.гггг"
+        value={value}
+        onClick={() => setOpen(true)}
       />
-    </PickerField>
+    </PickerFieldShell>
   );
 }
 
@@ -137,23 +149,42 @@ type TimePickerFieldProps = {
 };
 
 export function TimePickerField({ label = 'Время', value, onChange }: TimePickerFieldProps) {
-  const inputRef = usePickerInputRef();
+  const nativeRef = useRef<HTMLInputElement>(null);
   const hasTime = Boolean(value.trim());
 
+  const openPicker = () => openNativeTimePicker(nativeRef.current);
+
   return (
-    <PickerField
+    <PickerFieldShell
       label={label}
       hint="Необязательно — оставьте пустым, если время уточняется позже"
       icon={<ClockIcon />}
       iconLabel="Выбрать время"
-      onIconClick={() => openNativePicker(inputRef.current)}
+      iconSlot={
+        <div className="picker-field__icon-slot" aria-label="Выбрать время">
+          <span className="picker-field__icon-visual" aria-hidden>
+            <ClockIcon />
+          </span>
+          <input
+            ref={nativeRef}
+            type="time"
+            className="picker-field__native-overlay"
+            aria-label="Выбрать время"
+            value={hasTime ? value : '12:00'}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </div>
+      }
       trailing={
         hasTime ? (
           <button
             type="button"
             className="picker-field__clear"
             aria-label="Очистить время"
-            onClick={() => onChange('')}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange('');
+            }}
           >
             <ClearIcon />
           </button>
@@ -161,12 +192,13 @@ export function TimePickerField({ label = 'Время', value, onChange }: TimeP
       }
     >
       <input
-        ref={inputRef}
-        type="time"
+        type="text"
+        readOnly
         className={`picker-field__input picker-field__input--time${hasTime ? '' : ' picker-field__input--empty'}`}
+        placeholder="не указано"
         value={hasTime ? value : ''}
-        onChange={(e) => onChange(e.target.value)}
+        onClick={openPicker}
       />
-    </PickerField>
+    </PickerFieldShell>
   );
 }

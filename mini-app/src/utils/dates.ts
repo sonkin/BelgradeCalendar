@@ -335,6 +335,12 @@ export function nativeInputValueToBelgradeDate(value: string): string {
   return `${day}.${month}.${year}`;
 }
 
+export function belgradeTodayYmd(): { year: number; month: number; day: number } {
+  const key = belgradeDateKey(new Date());
+  const [year, month, day] = key.split('-').map(Number);
+  return { year, month, day };
+}
+
 export function formatDuration(minutes: number | null): string | null {
   if (!minutes) return null;
   const hours = Math.floor(minutes / 60);
