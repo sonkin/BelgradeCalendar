@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from 'react';
-import { normalizeBelgradeTimeInput } from '../utils/dates';
+import { formatBelgradeTimeWhileTyping, normalizeBelgradeTimeInput } from '../utils/dates';
 import { CalendarPopover } from './CalendarPopover';
 import { TimePopover } from './TimePopover';
 
@@ -144,7 +144,7 @@ export function TimePickerField({ label = 'Время', value, onChange }: TimeP
   return (
     <PickerFieldShell
       label={label}
-      hint="Необязательно — введите чч:мм или выберите по иконке"
+      hint="Необязательно — наберите часы и минуты цифрами (двоеточие подставится) или выберите по иконке"
       icon={<ClockIcon />}
       iconLabel="Выбрать время"
       onIconClick={() => setOpen((v) => !v)}
@@ -174,9 +174,10 @@ export function TimePickerField({ label = 'Время', value, onChange }: TimeP
         inputMode="numeric"
         autoComplete="off"
         className="picker-field__input picker-field__input--time picker-field__input--editable"
-        placeholder="чч:мм"
+        placeholder="18:30"
+        maxLength={5}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(formatBelgradeTimeWhileTyping(e.target.value))}
         onBlur={(e) => onChange(normalizeBelgradeTimeInput(e.target.value))}
       />
     </PickerFieldShell>

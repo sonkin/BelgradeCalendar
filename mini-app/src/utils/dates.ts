@@ -349,6 +349,15 @@ export function parseBelgradeTimeParts(value: string): { hour: number; minute: n
   return { hour: Number(match[1]), minute: Number(match[2]) };
 }
 
+/**
+ * Маска при вводе с цифровой клавиатуры: «1830» → «18:30», двоеточие не нужно набирать.
+ */
+export function formatBelgradeTimeWhileTyping(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
 /** Нормализация ввода времени в чч:мм при потере фокуса */
 export function normalizeBelgradeTimeInput(raw: string): string {
   const trimmed = raw.trim();
