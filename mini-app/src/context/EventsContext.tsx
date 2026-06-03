@@ -9,11 +9,11 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ApiError, fetchEvents, updateRsvp } from '../api/client';
+import { ApiError, clearRsvp as clearRsvpApi, fetchEvents, updateRsvp } from '../api/client';
 import type { EventDetail, EventListItem, RsvpStatus, User } from '../types';
 import { detailToListItem, isUpcomingEvent } from '../utils/eventMappers';
 import { sortEventsByStart } from '../utils/dates';
-import { applyDetailRsvp, applyListRsvp, userAsParticipant } from '../utils/rsvp';
+import { applyDetailRsvp, applyListRsvp, clearListRsvp, userAsParticipant } from '../utils/rsvp';
 
 function isEventDetail(event: EventListItem | EventDetail): event is EventDetail {
   return 'notGoing' in event.participants;
@@ -62,6 +62,7 @@ interface EventsContextValue {
     user: User,
     previousStatus: RsvpStatus | null,
   ) => Promise<EventDetail | null>;
+  toggleGoing: (eventId: string, user: User, myRsvp: RsvpStatus | null) => Promise<EventDetail | null>;
   getRsvpSaveState: (eventId: string) => RsvpSaveState;
   waitForEventRsvp: (eventId: string) => Promise<void>;
   mergeFetchedEventDetail: (fetched: EventDetail, user: User) => EventDetail;
@@ -333,6 +334,94 @@ export function EventsProvider({
     ],
   );
 
+  const clearRsvp = useCallback(
+    async (eventId: string, user: User): Promise<EventDetail | null> => {
+      let snapshot: EventListItem | null = null;
+
+      replaceEvents((prev) => {
+        const current = prev.find((event) => event.id === eventId);
+        if (!current) {
+          return prev;
+        }
+
+        snapshot = {
+          ...current,
+          participants: {
+            going: [...current.participants.going],
+            maybe: [...current.participants.maybe],
+          },
+        };
+
+        return prev.map((event) =>
+          event.id === eventId ? clearListRsvp(current, user.id) : event,
+        );
+      });
+
+      const seq = (rsvpSeqRef.current.get(eventId) ?? 0) + 1;
+      rsvpSeqRef.current.set(eventId, seq);
+
+      invalidateRefresh();
+      clearSavedMessageTimer(eventId);
+      setRsvpState(eventId, { phase: 'saving', message: 'Записывается в БД…' });
+
+      const promise = clearRsvpApi(eventId);
+      inFlightRsvpRef.current.set(eventId, promise);
+
+      try {
+        const detail = await promise;
+
+        if (rsvpSeqRef.current.get(eventId) !== seq) {
+          return null;
+        }
+
+        if (detail.myRsvp !== null) {
+          throw new Error('Сервер не сбросил ответ');
+        }
+
+        savedDetailRef.current.set(eventId, detail);
+        upsertEvent(detail);
+        setRsvpState(eventId, { phase: 'idle' });
+        return detail;
+      } catch (err) {
+        if (rsvpSeqRef.current.get(eventId) !== seq) {
+          return null;
+        }
+
+        const message =
+          err instanceof ApiError
+            ? `Ошибка ${err.status}: ${err.message}`
+            : err instanceof Error
+              ? err.message
+              : 'Не удалось снять ответ';
+
+        if (snapshot) {
+          const rollback = snapshot;
+          replaceEvents((prev) => prev.map((event) => (event.id === eventId ? rollback : event)));
+        } else {
+          void refresh();
+        }
+        setRsvpState(eventId, { phase: 'error', message });
+        WebApp.showAlert(message);
+        return null;
+      } finally {
+        if (inFlightRsvpRef.current.get(eventId) === promise) {
+          inFlightRsvpRef.current.delete(eventId);
+        }
+      }
+    },
+    [clearSavedMessageTimer, invalidateRefresh, refresh, replaceEvents, setRsvpState, upsertEvent],
+  );
+
+  const toggleGoing = useCallback(
+    async (eventId: string, user: User, myRsvp: RsvpStatus | null): Promise<EventDetail | null> => {
+      if (myRsvp === 'going') {
+        return clearRsvp(eventId, user);
+      }
+      return saveRsvp(eventId, 'going', user, myRsvp);
+    },
+    [clearRsvp, saveRsvp],
+  );
+
   const getRsvpSaveState = useCallback(
     (eventId: string): RsvpSaveState => rsvpStates[eventId] ?? { phase: 'idle' },
     [rsvpStates],
@@ -349,6 +438,7 @@ export function EventsProvider({
       removeEvent,
       replaceEvents,
       saveRsvp,
+      toggleGoing,
       getRsvpSaveState,
       waitForEventRsvp,
       mergeFetchedEventDetail,
@@ -364,6 +454,7 @@ export function EventsProvider({
       removeEvent,
       replaceEvents,
       saveRsvp,
+      toggleGoing,
       getRsvpSaveState,
       waitForEventRsvp,
       mergeFetchedEventDetail,

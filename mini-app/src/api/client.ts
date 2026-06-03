@@ -123,6 +123,16 @@ export async function updateRsvp(eventId: string, status: RsvpStatus): Promise<E
   return data.event;
 }
 
+export async function clearRsvp(eventId: string): Promise<EventDetail> {
+  const data = await request<{ event: EventDetail }>(`/events/${eventId}/rsvp`, {
+    method: 'DELETE',
+  });
+  if (!data?.event) {
+    throw new Error('Сервер не вернул обновлённое событие');
+  }
+  return data.event;
+}
+
 export async function deleteEvent(eventId: string): Promise<void> {
   await request<void>(`/events/${eventId}`, { method: 'DELETE' });
 }

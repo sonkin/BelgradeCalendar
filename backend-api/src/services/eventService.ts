@@ -332,3 +332,14 @@ export async function upsertRsvp(
 
   return getEventById(eventId, user._id.toString());
 }
+
+export async function clearRsvp(eventId: string, user: IUser): Promise<EventDetailDto> {
+  await loadEventOrThrow(eventId);
+
+  await EventParticipant.findOneAndDelete({
+    eventId: new mongoose.Types.ObjectId(eventId),
+    userId: user._id,
+  });
+
+  return getEventById(eventId, user._id.toString());
+}

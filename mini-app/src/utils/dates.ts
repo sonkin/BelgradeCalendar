@@ -149,12 +149,25 @@ export function formatMonthLabel(monthKey: string): string {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-export function formatCompactEventSchedule(iso: string, timeUnset: boolean): string {
-  const date = formatEventDate(iso);
+/** Краткий список: «суббота 3 июля, 19:00» */
+export function formatCompactListSchedule(iso: string, timeUnset: boolean): string {
+  const d = new Date(iso);
+  const weekday = new Intl.DateTimeFormat('ru-RU', {
+    timeZone: TIMEZONE,
+    weekday: 'long',
+  })
+    .format(d)
+    .toLowerCase();
+  const dayMonth = new Intl.DateTimeFormat('ru-RU', {
+    timeZone: TIMEZONE,
+    day: 'numeric',
+    month: 'long',
+  }).format(d);
+
   if (timeUnset) {
-    return `${date}, время уточняется`;
+    return `${weekday} ${dayMonth}, время уточняется`;
   }
-  return `${date}, ${formatEventTime(iso)}`;
+  return `${weekday} ${dayMonth}, ${formatEventTime(iso)}`;
 }
 
 export function filterEventsByMonthKey<T extends { startsAt: string }>(

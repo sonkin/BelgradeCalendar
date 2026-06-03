@@ -44,6 +44,17 @@ export function applyDetailRsvp(
   };
 }
 
+export function clearListRsvp(event: EventListItem, userId: string): EventListItem {
+  return {
+    ...event,
+    myRsvp: null,
+    participants: {
+      going: event.participants.going.filter((p) => p.id !== userId),
+      maybe: event.participants.maybe.filter((p) => p.id !== userId),
+    },
+  };
+}
+
 export function userAsParticipant(user: {
   id: string;
   telegramId: number;

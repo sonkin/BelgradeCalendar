@@ -214,24 +214,61 @@ textarea {
   font-weight: 600;
 }
 
+.event-list-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .event-card--compact {
-  padding: 12px 14px;
+  padding: 10px 12px;
+  margin-bottom: 0;
+}
+
+.event-card--compact__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .event-card--compact__link {
-  display: block;
+  flex: 1;
+  min-width: 0;
 }
 
 .event-card--compact__title {
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   color: var(--app-text);
 }
 
 .event-card--compact__schedule {
   font-size: 14px;
   color: var(--app-hint);
+}
+
+.event-card--compact__going {
+  flex: 0 0 auto;
+  border: 1px solid var(--app-border);
+  background: transparent;
+  color: var(--app-text);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.event-card--compact__going--active {
+  background: var(--app-button);
+  color: var(--app-button-text);
+  border-color: var(--app-button);
+}
+
+.event-card--compact__going:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .day-section {

@@ -25,7 +25,7 @@ import { useListScrollRestoration, saveListScrollPosition } from '../utils/scrol
 export function EventListPage() {
   const location = useLocation();
   const { user } = useAuth();
-  const { events, initialLoading, error, refresh, saveRsvp } = useEvents();
+  const { events, initialLoading, error, refresh, saveRsvp, toggleGoing } = useEvents();
 
   const monthKeys = useMemo(() => listSelectableMonthKeys(), []);
   const defaultMonthKey = useMemo(() => currentBelgradeMonthKey(), []);
@@ -81,6 +81,14 @@ export function EventListPage() {
       void saveRsvp(eventId, status, user, previousStatus);
     },
     [saveRsvp, user],
+  );
+
+  const handleToggleGoing = useCallback(
+    (eventId: string, myRsvp: RsvpStatus | null) => {
+      if (!user) return;
+      void toggleGoing(eventId, user, myRsvp);
+    },
+    [toggleGoing, user],
   );
 
   const showEmpty = !initialLoading && !error && events.length === 0;
@@ -144,7 +152,12 @@ export function EventListPage() {
           <p>Нет событий в {formatMonthLabel(activeMonthKey)}</p>
         </div>
       )}
-      <EventListByDay events={visibleEvents} viewMode={viewMode} onRsvpChange={handleRsvpChange} />
+      <EventListByDay
+        events={visibleEvents}
+        viewMode={viewMode}
+        onRsvpChange={handleRsvpChange}
+        onToggleGoing={handleToggleGoing}
+      />
     </Layout>
   );
 }

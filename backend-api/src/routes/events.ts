@@ -6,6 +6,7 @@ import {
   getEventById,
   listEvents,
   updateEvent,
+  clearRsvp,
   upsertRsvp,
 } from '../services/eventService.js';
 import type { CreateEventBody, RsvpBody, UpdateEventBody } from '../types/index.js';
@@ -75,6 +76,15 @@ eventsRouter.put('/:id/rsvp', async (req, res, next) => {
     }
 
     const event = await upsertRsvp(req.params.id, body.status, req.user!);
+    res.json({ event });
+  } catch (error) {
+    next(error);
+  }
+});
+
+eventsRouter.delete('/:id/rsvp', async (req, res, next) => {
+  try {
+    const event = await clearRsvp(req.params.id, req.user!);
     res.json({ event });
   } catch (error) {
     next(error);
