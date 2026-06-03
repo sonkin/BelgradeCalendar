@@ -67,6 +67,15 @@ textarea {
   margin-bottom: 8px;
 }
 
+.layout__header-row--home {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.layout__header-brand {
+  flex: 0 0 auto;
+}
+
 .layout__header-actions {
   display: flex;
   align-items: center;
@@ -75,6 +84,18 @@ textarea {
   min-width: 0;
   flex-wrap: nowrap;
   justify-content: flex-end;
+}
+
+.layout__header-actions--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.layout__header-actions--stack .btn {
+  width: 100%;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .layout__header-actions .btn--create {
@@ -87,6 +108,64 @@ textarea {
 .layout__header-actions .btn--settings {
   width: auto;
   flex: 0 0 auto;
+}
+
+.app-brand {
+  position: relative;
+}
+
+.app-brand__logo-btn {
+  display: flex;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 50%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-brand__logo-btn:active {
+  opacity: 0.85;
+}
+
+.app-brand__logo {
+  display: block;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.app-brand__popover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  min-width: 180px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--app-border);
+  background: var(--app-secondary-bg);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--app-text) 18%, transparent);
+}
+
+.app-brand__link {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--app-link);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-brand__year {
+  margin: 6px 0 0;
+  font-size: 15px;
 }
 
 .layout__back {

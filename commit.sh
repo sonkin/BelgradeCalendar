@@ -1,3 +1,3 @@
 git add .
-git commit -m "reminders added"
+git commit -m "logo icon added"
 git push

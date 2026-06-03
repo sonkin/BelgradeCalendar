@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { AppBrand } from '../components/AppBrand';
 import { EventListByDay } from '../components/EventListByDay';
+import { HomeHeaderActions } from '../components/HomeHeaderActions';
 import { Layout } from '../components/Layout';
 import { ListViewTabs } from '../components/ListViewTabs';
 import { MonthNavigator } from '../components/MonthNavigator';
@@ -20,7 +22,7 @@ import {
   writeSelectedMonthKey,
   type ListViewMode,
 } from '../utils/listView';
-import { useListScrollRestoration, saveListScrollPosition } from '../utils/scrollRestoration';
+import { useListScrollRestoration } from '../utils/scrollRestoration';
 
 export function EventListPage() {
   const location = useLocation();
@@ -112,26 +114,7 @@ export function EventListPage() {
     viewMode === 'monthly' && !showEmpty && events.length > 0 && visibleEvents.length === 0;
 
   return (
-    <Layout
-      action={
-        <div className="layout__header-actions">
-          <Link
-            to="/events/new"
-            className="btn btn--primary btn--small btn--create"
-            onClick={saveListScrollPosition}
-          >
-            + Создать новое событие
-          </Link>
-          <Link
-            to="/settings"
-            className="btn btn--secondary btn--small btn--settings"
-            onClick={saveListScrollPosition}
-          >
-            ⚙ Настройки
-          </Link>
-        </div>
-      }
-    >
+    <Layout brand={<AppBrand />} action={<HomeHeaderActions />}>
       <ListViewTabs mode={viewMode} onChange={handleViewModeChange} />
 
       {viewMode === 'monthly' && (
