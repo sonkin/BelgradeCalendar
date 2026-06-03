@@ -1,24 +1,30 @@
 import { FormEvent, useEffect, useState } from 'react';
-import WebApp from '@twa-dev/sdk';
 import { useNavigate, useParams } from 'react-router-dom';
-import { deleteEvent, fetchEvent, updateEvent, updateRsvp } from '../api/client';
+import { deleteEvent, fetchEvent, updateEvent } from '../api/client';
 import { EventDateTime } from '../components/EventDateTime';
 import { DatetimeField } from '../components/DatetimeField';
 import { Layout } from '../components/Layout';
 import { ParticipantNameLink } from '../components/ParticipantNameLink';
-import { RsvpButtons } from '../components/RsvpButtons';
+import { RsvpSection } from '../components/RsvpSection';
 import { useAuth } from '../context/AuthContext';
 import { useEvents } from '../context/EventsContext';
 import type { EventDetail, RsvpStatus } from '../types';
 import { belgradePartsToPayload, formatDuration, isoToBelgradeParts } from '../utils/dates';
 import { listItemToDetail } from '../utils/eventMappers';
-import { applyDetailRsvp, userAsParticipant } from '../utils/rsvp';
 
 export function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getEventById, upsertEvent, removeEvent } = useEvents();
+  const {
+    getEventById,
+    upsertEvent,
+    removeEvent,
+    saveRsvp,
+    waitForEventRsvp,
+    mergeFetchedEventDetail,
+    takeSavedEventDetail,
+  } = useEvents();
 
   const cached = id ? getEventById(id) : undefined;
   const [event, setEvent] = useState<EventDetail | null>(() =>
@@ -46,8 +52,15 @@ export function EventDetailPage() {
       try {
         const data = await fetchEvent(id);
         if (cancelled) return;
-        setEvent(data);
-        upsertEvent(data);
+
+        await waitForEventRsvp(id);
+        if (cancelled) return;
+
+        const saved = takeSavedEventDetail(id);
+        const next = saved ?? (user ? mergeFetchedEventDetail(data, user) : data);
+
+        setEvent(next);
+        upsertEvent(next);
       } catch (err) {
         if (cancelled) return;
         setEvent((current) => {
@@ -62,7 +75,7 @@ export function EventDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, upsertEvent]);
+  }, [id, mergeFetchedEventDetail, takeSavedEventDetail, upsertEvent, user, waitForEventRsvp]);
 
   const canModify =
     user && event && (user.role === 'admin' || user.id === event.createdBy.id);
@@ -117,25 +130,9 @@ export function EventDetailPage() {
   const handleRsvp = async (status: RsvpStatus) => {
     if (!id || !event || !user || event.myRsvp === status) return;
 
-    const snapshot: EventDetail = {
-      ...event,
-      participants: {
-        going: [...event.participants.going],
-        maybe: [...event.participants.maybe],
-        notGoing: [...event.participants.notGoing],
-      },
-    };
-
-    const optimistic = applyDetailRsvp(event, userAsParticipant(user), status);
-    setEvent(optimistic);
-    upsertEvent(optimistic);
-
-    try {
-      await updateRsvp(id, status);
-    } catch {
-      setEvent(snapshot);
-      upsertEvent(snapshot);
-      WebApp.showAlert('Не удалось сохранить ответ');
+    const updated = await saveRsvp(id, status, user);
+    if (updated) {
+      setEvent(updated);
     }
   };
 
@@ -223,7 +220,7 @@ export function EventDetailPage() {
 
         <section className="participants-section">
           <h3>Ваш ответ</h3>
-          <RsvpButtons value={event.myRsvp} onChange={handleRsvp} />
+          <RsvpSection eventId={event.id} value={event.myRsvp} onChange={handleRsvp} />
         </section>
 
         {event.participants.going.length > 0 && (

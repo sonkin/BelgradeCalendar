@@ -221,6 +221,42 @@ textarea {
   gap: 8px;
 }
 
+.rsvp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rsvp-status {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rsvp-status--saving {
+  color: var(--app-hint);
+}
+
+.rsvp-status--saved {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.rsvp-status__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #16a34a 16%, transparent);
+  font-size: 12px;
+  line-height: 1;
+}
+
 .rsvp-btn {
   flex: 1;
   border: 1px solid var(--app-border);

@@ -1,21 +1,18 @@
 import { useCallback, useMemo } from 'react';
-import WebApp from '@twa-dev/sdk';
 import { Link, useLocation } from 'react-router-dom';
-import { updateRsvp } from '../api/client';
 import { DaySectionHeader } from '../components/DaySectionHeader';
 import { EventCard } from '../components/EventCard';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { useEvents } from '../context/EventsContext';
-import type { EventListItem, RsvpStatus } from '../types';
+import type { RsvpStatus } from '../types';
 import { groupEventsByDay } from '../utils/dates';
-import { applyListRsvp, userAsParticipant } from '../utils/rsvp';
 import { useListScrollRestoration, saveListScrollPosition } from '../utils/scrollRestoration';
 
 export function EventListPage() {
   const location = useLocation();
   const { user } = useAuth();
-  const { events, initialLoading, error, refresh, replaceEvents } = useEvents();
+  const { events, initialLoading, error, refresh, saveRsvp } = useEvents();
 
   const grouped = useMemo(() => groupEventsByDay(events), [events]);
   const contentReady = events.length > 0 || (!initialLoading && !error);
@@ -23,39 +20,11 @@ export function EventListPage() {
   useListScrollRestoration(contentReady, location.key);
 
   const handleRsvpChange = useCallback(
-    async (eventId: string, status: RsvpStatus) => {
+    (eventId: string, status: RsvpStatus) => {
       if (!user) return;
-
-      let snapshot: EventListItem | null = null;
-
-      replaceEvents((prev) => {
-        const current = prev.find((event) => event.id === eventId);
-        if (!current || current.myRsvp === status) return prev;
-
-        snapshot = {
-          ...current,
-          participants: {
-            going: [...current.participants.going],
-            maybe: [...current.participants.maybe],
-          },
-        };
-
-        return prev.map((event) =>
-          event.id === eventId ? applyListRsvp(current, userAsParticipant(user), status) : event,
-        );
-      });
-
-      if (!snapshot) return;
-
-      try {
-        await updateRsvp(eventId, status);
-      } catch {
-        const rollback = snapshot;
-        replaceEvents((prev) => prev.map((event) => (event.id === eventId ? rollback : event)));
-        WebApp.showAlert('Не удалось сохранить ответ');
-      }
+      void saveRsvp(eventId, status, user);
     },
-    [replaceEvents, user],
+    [saveRsvp, user],
   );
 
   const sortedGroups = useMemo(() => {

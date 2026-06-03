@@ -3,7 +3,7 @@ import type { EventListItem, RsvpStatus } from '../types';
 import { formatEventTimeLabel } from '../utils/dates';
 import { saveListScrollPosition } from '../utils/scrollRestoration';
 import { ParticipantNames } from './ParticipantNames';
-import { RsvpButtons } from './RsvpButtons';
+import { RsvpSection } from './RsvpSection';
 
 interface EventCardProps {
   event: EventListItem;
@@ -41,7 +41,8 @@ export function EventCard({ event, onRsvpChange }: EventCardProps) {
           </div>
         )}
       </Link>
-      <RsvpButtons
+      <RsvpSection
+        eventId={event.id}
         value={event.myRsvp}
         onChange={(status) => onRsvpChange(event.id, status)}
       />
