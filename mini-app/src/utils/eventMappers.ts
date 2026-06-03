@@ -1,5 +1,15 @@
 import type { EventDetail, EventListItem } from '../types';
 
+const DEFAULT_DURATION_MINUTES = 120;
+
+export function isUpcomingEvent(
+  event: Pick<EventListItem, 'startsAt' | 'durationMinutes'>,
+  now = Date.now(),
+): boolean {
+  const durationMs = (event.durationMinutes ?? DEFAULT_DURATION_MINUTES) * 60 * 1000;
+  return new Date(event.startsAt).getTime() + durationMs > now;
+}
+
 export function listItemToDetail(item: EventListItem): EventDetail {
   return {
     id: item.id,

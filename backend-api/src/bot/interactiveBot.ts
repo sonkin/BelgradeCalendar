@@ -1,6 +1,6 @@
 import { Bot, InlineKeyboard } from 'grammy';
 import type { Context } from 'grammy';
-import { config, miniAppDirectLink } from './config.js';
+import { config, miniAppDirectLink } from '../config.js';
 
 const PINNED_MESSAGE_TEXT =
   '📅 Календарь встреч Belgrade Friends\n\nНажмите кнопку ниже, чтобы посмотреть события и отметить участие.';
@@ -40,7 +40,7 @@ async function replyWithCalendarButton(ctx: Context, text: string): Promise<void
   await ctx.reply(text, { reply_markup: calendarKeyboard(inGroup) });
 }
 
-export function createBot(): Bot {
+export function createInteractiveBot(): Bot {
   const bot = new Bot(config.botToken);
 
   bot.command('start', async (ctx) => {
@@ -69,7 +69,7 @@ export function createBot(): Bot {
     }
 
     if (!inGroup && !config.webappUrl.startsWith('https://')) {
-      await ctx.reply('Сначала задай HTTPS в WEBAPP_URL (ngrok или prod), перезапусти бота.');
+      await ctx.reply('Сначала задай HTTPS в WEBAPP_URL (ngrok или prod), перезапусти сервер.');
       return;
     }
 

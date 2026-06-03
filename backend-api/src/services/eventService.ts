@@ -13,6 +13,17 @@ import { AppError } from '../utils/errors.js';
 import { toParticipantUserDto } from '../utils/participantDto.js';
 import { postEventAnnouncement, postEventUpdateNotification } from './telegramBot.js';
 
+const DEFAULT_DURATION_MINUTES = 120;
+
+function eventEndTime(event: IEvent): Date {
+  const durationMinutes = event.durationMinutes ?? DEFAULT_DURATION_MINUTES;
+  return new Date(event.startsAt.getTime() + durationMinutes * 60 * 1000);
+}
+
+function isUpcomingEvent(event: IEvent, now = new Date()): boolean {
+  return eventEndTime(event) > now;
+}
+
 async function getParticipantsForList(
   eventIds: mongoose.Types.ObjectId[],
 ): Promise<Map<string, { going: IUser[]; maybe: IUser[] }>> {
@@ -119,19 +130,30 @@ export async function listEvents(
   to: string | undefined,
   currentUserId: string,
 ): Promise<EventListItemDto[]> {
+  const now = new Date();
   const filter: Record<string, unknown> = { deletedAt: null };
 
-  if (from || to) {
-    filter.startsAt = {};
-    if (from) {
-      (filter.startsAt as Record<string, Date>).$gte = parseDate(from, 'from');
-    }
-    if (to) {
-      (filter.startsAt as Record<string, Date>).$lte = parseDate(to, 'to');
+  const startsAtFilter: Record<string, Date> = {
+    // Включаем ещё идущие события, которые начались недавно
+    $gte: new Date(now.getTime() - DEFAULT_DURATION_MINUTES * 60 * 1000),
+  };
+
+  if (from) {
+    const fromDate = parseDate(from, 'from');
+    if (fromDate > startsAtFilter.$gte) {
+      startsAtFilter.$gte = fromDate;
     }
   }
 
-  const events = await Event.find(filter).sort({ startsAt: 1 });
+  if (to) {
+    startsAtFilter.$lte = parseDate(to, 'to');
+  }
+
+  filter.startsAt = startsAtFilter;
+
+  const events = (await Event.find(filter).sort({ startsAt: 1 })).filter((event) =>
+    isUpcomingEvent(event, now),
+  );
   const eventIds = events.map((event) => event._id);
 
   const [participantsMap, myRsvpMap] = await Promise.all([

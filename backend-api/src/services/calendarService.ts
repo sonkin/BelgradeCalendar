@@ -11,12 +11,6 @@ const DEFAULT_DURATION_MINUTES = 120;
 const FEED_CALENDAR_NAME = 'Belgrade Friends Calendar';
 const FEED_GOING_CALENDAR_NAME = 'Belgrade Friends — Иду';
 
-function startOfToday(): Date {
-  const from = new Date();
-  from.setHours(0, 0, 0, 0);
-  return from;
-}
-
 function toWebcalUrl(httpsUrl: string): string {
   return httpsUrl.replace(/^http:\/\//i, 'webcal://').replace(/^https:\/\//i, 'webcal://');
 }
@@ -60,14 +54,17 @@ export async function findUserByFeedToken(token: string): Promise<IUser | null> 
 }
 
 async function loadFeedEvents(filter: CalendarFeedFilter, userId: string): Promise<IEvent[]> {
-  const from = startOfToday();
+  const now = new Date();
+  const from = new Date(now.getTime() - DEFAULT_DURATION_MINUTES * 60 * 1000);
   const baseFilter = {
     deletedAt: null,
     startsAt: { $gte: from },
   };
 
+  const filterUpcoming = (events: IEvent[]) => events.filter((event) => isUpcomingEvent(event, now));
+
   if (filter === 'all') {
-    return Event.find(baseFilter).sort({ startsAt: 1 });
+    return filterUpcoming(await Event.find(baseFilter).sort({ startsAt: 1 }));
   }
 
   const participations = await EventParticipant.find({
@@ -80,15 +77,21 @@ async function loadFeedEvents(filter: CalendarFeedFilter, userId: string): Promi
     return [];
   }
 
-  return Event.find({
-    ...baseFilter,
-    _id: { $in: eventIds },
-  }).sort({ startsAt: 1 });
+  return filterUpcoming(
+    await Event.find({
+      ...baseFilter,
+      _id: { $in: eventIds },
+    }).sort({ startsAt: 1 }),
+  );
 }
 
 function eventEndTime(event: IEvent): Date {
   const durationMinutes = event.durationMinutes ?? DEFAULT_DURATION_MINUTES;
   return new Date(event.startsAt.getTime() + durationMinutes * 60 * 1000);
+}
+
+function isUpcomingEvent(event: IEvent, now = new Date()): boolean {
+  return eventEndTime(event) > now;
 }
 
 function eventSequence(event: IEvent): number {

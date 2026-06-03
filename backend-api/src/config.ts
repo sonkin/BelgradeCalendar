@@ -43,5 +43,13 @@ export const config = {
   webappUrl: process.env.WEBAPP_URL ?? 'https://belca.jtutor.app',
   apiPublicUrl: (process.env.API_PUBLIC_URL ?? 'http://localhost:3000').replace(/\/$/, ''),
   botUsername: process.env.BOT_USERNAME ?? 'BelgradeCalendarBot',
+  botWebhookUrl: process.env.BOT_WEBHOOK_URL ?? '',
+  botUsePolling:
+    process.env.BOT_USE_POLLING === 'true' || !process.env.BOT_WEBHOOK_URL?.startsWith('https://'),
   timezone: process.env.TZ ?? 'Europe/Belgrade',
 };
+
+export function miniAppDirectLink(startParam?: string): string {
+  const base = `https://t.me/${config.botUsername}?startapp`;
+  return startParam ? `${base}=${encodeURIComponent(startParam)}` : base;
+}

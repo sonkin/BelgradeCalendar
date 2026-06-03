@@ -106,7 +106,7 @@
 ```text
 belgrade-calendar/
 ├── backend-api/          # REST API + Mongoose
-├── telegram-bot/         # Webhook + публикация в чат
+├── backend-api/src/bot/  # Grammy (в одном процессе с API)
 ├── mini-app/             # React + Vite
 ├── docker-compose.yml    # MongoDB (опционально)
 ├── docs/
@@ -319,7 +319,7 @@ server {
     }
 
     location /bot/webhook {
-        proxy_pass http://127.0.0.1:3001/webhook;
+        proxy_pass http://127.0.0.1:3000/bot/webhook;
     }
 }
 ```

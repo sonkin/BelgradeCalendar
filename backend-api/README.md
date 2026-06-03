@@ -2,7 +2,7 @@
 
 REST API для [Belgrade Friends Calendar](../README.md).
 
-Этот пакет отвечает за данные, авторизацию, iCal и посты в Telegram-чат. Обзор всего проекта — в [**корневом README**](../README.md).
+Один процесс Node.js: **REST API**, **Grammy-бот** (команды, webhook) и посты в групповой чат. Обзор проекта — [**корневой README**](../README.md).
 
 ## Возможности
 
@@ -11,7 +11,7 @@ REST API для [Belgrade Friends Calendar](../README.md).
 - **RSVP** — статусы `going`, `maybe`, `not_going`; списки участников в ответах API
 - **Профиль** — опциональное отображаемое имя (`displayName`) поверх имени из Telegram
 - **iCal** — персональные feed-токены: все события или только «Иду» (Apple / Google Calendar)
-- **Telegram** — анонс нового события и уведомление об изменении в групповой чат (`TELEGRAM_CHAT_ID`)
+- **Telegram** — анонсы в чат; бот: `/start`, `/calendar`, `/setup`, menu button, webhook или polling
 
 Часовой пояс приложения: **Europe/Belgrade**. Даты в MongoDB хранятся в UTC.
 
@@ -21,6 +21,7 @@ REST API для [Belgrade Friends Calendar](../README.md).
 - MongoDB + Mongoose
 - JWT, валидация подписи Telegram `initData`
 - [ical-generator](https://www.npmjs.com/package/ical-generator) для `.ics`
+- [Grammy](https://grammy.dev/) для команд бота
 
 ## Требования
 
@@ -42,7 +43,7 @@ npm install
 npm run dev
 ```
 
-API: [http://localhost:3000](http://localhost:3000)  
+Сервер: [http://localhost:3000](http://localhost:3000) (API + бот в **polling**, если `BOT_USE_POLLING=true`)  
 Health: `GET /health` → `{ "ok": true }`
 
 Сборка и запуск production:
@@ -68,6 +69,8 @@ npm start
 | `JWT_EXPIRES_IN` | нет | Срок JWT, по умолчанию `30d` |
 | `PORT` | нет | Порт API, по умолчанию `3000` |
 | `TZ` | нет | Таймзона, по умолчанию `Europe/Belgrade` |
+| `BOT_WEBHOOK_URL` | prod | `https://<домен>/bot/webhook` |
+| `BOT_USE_POLLING` | нет | `true` — polling (dev); `false` + webhook на prod |
 
 \*Пустой список допустим технически, но тогда не будет пользователей с ролью `admin`.
 
@@ -210,32 +213,47 @@ curl -s -X PUT "$API/events/<eventId>/rsvp" \
   -d '{"status":"going"}' | jq .
 ```
 
+## Telegram-бот
+
+Запускается вместе с API (`src/bot/`).
+
+| Режим | Когда | Как |
+|-------|-------|-----|
+| **Polling** | Локально (по умолчанию) | `BOT_USE_POLLING=true` или webhook URL без https |
+| **Webhook** | Production | `BOT_USE_POLLING=false`, `BOT_WEBHOOK_URL=https://<домен>/bot/webhook` |
+
+| Команда | Описание |
+|---------|----------|
+| `/start` | Приветствие + кнопка Mini App |
+| `/calendar` | Кнопка «Открыть календарь» |
+| `/setup` | Admin: закреплённый пост в группе с кнопкой |
+
+В группе кнопка — ссылка `t.me/?startapp`; в личке — `web_app`, если `WEBAPP_URL` — HTTPS.
+
 ## Структура проекта
 
 ```
 src/
-├── app.ts              # Express, маршруты
-├── config.ts           # env
-├── db.ts               # MongoDB
-├── index.ts            # entry
-├── middleware/         # JWT, errors
-├── models/             # User, Event, EventParticipant
-├── routes/             # auth, me, events, calendar
-├── services/           # бизнес-логика, Telegram, iCal
+├── app.ts
+├── index.ts            # DB + API + bot
+├── bot/                # Grammy: команды, webhook/polling
+├── config.ts
+├── middleware/
+├── models/
+├── routes/
+├── services/           # события, iCal, посты в чат (fetch)
 ├── types/
-└── utils/              # DTO, ошибки
+└── utils/
 ```
 
 ## Production
 
-Типичная схема:
+Один процесс `npm start` на порту `3000`.
 
-- Mini App — статика на nginx (`/`)
-- API — `proxy_pass` на `127.0.0.1:3000` с префиксом `/api/`
-- iCal — те же хосты: `{API_PUBLIC_URL}/calendar/{token}/all.ics`
-- Бот — отдельный процесс `telegram-bot/`, webhook `/bot/webhook`
-
-Пример nginx:
+- Mini App — статика nginx (`/`)
+- API — `location /api/` → `127.0.0.1:3000/`
+- Webhook — `location /bot/webhook` → `127.0.0.1:3000/bot/webhook`
+- iCal — `{API_PUBLIC_URL}/calendar/{token}/all.ics`
 
 ```nginx
 location /api/ {
@@ -243,9 +261,13 @@ location /api/ {
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
 }
+
+location /bot/webhook {
+    proxy_pass http://127.0.0.1:3000/bot/webhook;
+}
 ```
 
-На prod задайте `API_PUBLIC_URL=https://<ваш-домен>/api`, чтобы ссылки подписки на календарь были корректными.
+`API_PUBLIC_URL=https://<домен>/api`, `BOT_USE_POLLING=false`.
 
 ## Скрипты
 
@@ -259,4 +281,4 @@ location /api/ {
 ## См. также
 
 - [Корневой README](../README.md) — архитектура, быстрый старт, деплой
-- [`mini-app/`](../mini-app/) · [`telegram-bot/`](../telegram-bot/) · [`docs/decisions.md`](../docs/decisions.md)
+- [`mini-app/`](../mini-app/) · [`docs/decisions.md`](../docs/decisions.md)

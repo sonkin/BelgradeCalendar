@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { fetchEvents } from '../api/client';
 import type { EventDetail, EventListItem } from '../types';
-import { detailToListItem } from '../utils/eventMappers';
+import { detailToListItem, isUpcomingEvent } from '../utils/eventMappers';
 
 function isEventDetail(event: EventListItem | EventDetail): event is EventDetail {
   return 'notGoing' in event.participants;
@@ -34,7 +34,7 @@ function writeCache(events: EventListItem[]): void {
 function getDateRange() {
   const now = new Date();
   return {
-    from: new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString(),
+    from: now.toISOString(),
     to: new Date(now.getFullYear(), now.getMonth() + 3, now.getDate()).toISOString(),
   };
 }
@@ -96,9 +96,9 @@ export function EventsProvider({
     const item = isEventDetail(event) ? detailToListItem(event) : event;
 
     setEvents((prev) => {
-      const next = [...prev.filter((existing) => existing.id !== item.id), item].sort((a, b) =>
-        a.startsAt.localeCompare(b.startsAt),
-      );
+      const next = [...prev.filter((existing) => existing.id !== item.id), item]
+        .filter(isUpcomingEvent)
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
       writeCache(next);
       return next;
     });

@@ -1,4 +1,4 @@
-import { config } from '../config.js';
+import { config, miniAppDirectLink } from '../config.js';
 import type { IEvent } from '../models/Event.js';
 import type { IUser } from '../models/User.js';
 
@@ -56,11 +56,6 @@ export function formatEventUpdateText(event: IEvent): string {
 export function buildEventWebAppUrl(eventId: string): string {
   const base = config.webappUrl.replace(/\/$/, '');
   return `${base}/events/${eventId}`;
-}
-
-function miniAppDirectLink(startParam?: string): string {
-  const base = `https://t.me/${config.botUsername}?startapp`;
-  return startParam ? `${base}=${encodeURIComponent(startParam)}` : base;
 }
 
 function buildOpenCalendarButton(eventId: string) {

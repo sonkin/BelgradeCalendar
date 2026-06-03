@@ -182,10 +182,8 @@ notifications
 Но если ты хочешь сделать это как часть своей экосистемы проектов, я бы отделил:
 
 ```text
-telegram-bot/
-backend-api/
+backend-api/   # API + Telegram bot
 mini-app/
-database/
 ```
 
 ## Почему не стоит делать только ботом
