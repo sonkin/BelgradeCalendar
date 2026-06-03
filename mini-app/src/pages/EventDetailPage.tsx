@@ -1,0 +1,276 @@
+import { FormEvent, useEffect, useState } from 'react';
+import WebApp from '@twa-dev/sdk';
+import { useNavigate, useParams } from 'react-router-dom';
+import { deleteEvent, fetchEvent, updateEvent, updateRsvp } from '../api/client';
+import { EventDateTime } from '../components/EventDateTime';
+import { Layout } from '../components/Layout';
+import { ParticipantNameLink } from '../components/ParticipantNameLink';
+import { RsvpButtons } from '../components/RsvpButtons';
+import { useAuth } from '../context/AuthContext';
+import { useEvents } from '../context/EventsContext';
+import type { EventDetail, RsvpStatus } from '../types';
+import { formatDuration, isoToLocalDatetime, localDatetimeToIso } from '../utils/dates';
+import { listItemToDetail } from '../utils/eventMappers';
+import { applyDetailRsvp, userAsParticipant } from '../utils/rsvp';
+
+export function EventDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { getEventById, upsertEvent, removeEvent } = useEvents();
+
+  const cached = id ? getEventById(id) : undefined;
+  const [event, setEvent] = useState<EventDetail | null>(() =>
+    cached ? listItemToDetail(cached) : null,
+  );
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editStartsAtLocal, setEditStartsAtLocal] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const cachedItem = getEventById(id);
+    setEvent(cachedItem ? listItemToDetail(cachedItem) : null);
+    setSyncError(null);
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const data = await fetchEvent(id);
+        if (cancelled) return;
+        setEvent(data);
+        upsertEvent(data);
+      } catch (err) {
+        if (cancelled) return;
+        setEvent((current) => {
+          if (!current) {
+            setSyncError(err instanceof Error ? err.message : 'Событие не найдено');
+          }
+          return current;
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, upsertEvent]);
+
+  const canModify =
+    user && event && (user.role === 'admin' || user.id === event.createdBy.id);
+
+  const startEditing = () => {
+    if (!event) return;
+    setEditTitle(event.title);
+    setEditStartsAtLocal(isoToLocalDatetime(event.startsAt));
+    setEditDescription(event.description ?? '');
+    setEditError(null);
+    setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setEditing(false);
+    setEditError(null);
+  };
+
+  const handleSaveEdit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!id || !event) return;
+
+    const title = editTitle.trim();
+    if (!title) {
+      setEditError('Укажите название');
+      return;
+    }
+
+    setSaving(true);
+    setEditError(null);
+
+    try {
+      const updated = await updateEvent(id, {
+        title,
+        startsAt: localDatetimeToIso(editStartsAtLocal),
+        description: editDescription.trim() || null,
+      });
+      setEvent(updated);
+      upsertEvent(updated);
+      setEditing(false);
+
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Не удалось сохранить изменения');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRsvp = async (status: RsvpStatus) => {
+    if (!id || !event || !user || event.myRsvp === status) return;
+
+    const snapshot: EventDetail = {
+      ...event,
+      participants: {
+        going: [...event.participants.going],
+        maybe: [...event.participants.maybe],
+        notGoing: [...event.participants.notGoing],
+      },
+    };
+
+    const optimistic = applyDetailRsvp(event, userAsParticipant(user), status);
+    setEvent(optimistic);
+    upsertEvent(optimistic);
+
+    try {
+      await updateRsvp(id, status);
+    } catch {
+      setEvent(snapshot);
+      upsertEvent(snapshot);
+      WebApp.showAlert('Не удалось сохранить ответ');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!id || !window.confirm('Удалить это событие?')) return;
+    setDeleting(true);
+    try {
+      await deleteEvent(id);
+      removeEvent(id);
+      navigate('/');
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : 'Не удалось удалить');
+      setDeleting(false);
+    }
+  };
+
+  if (!event) {
+    return (
+      <Layout title="Событие" backTo="/">
+        {syncError ? (
+          <div className="error-box">{syncError}</div>
+        ) : (
+          <p className="muted">Загрузка…</p>
+        )}
+      </Layout>
+    );
+  }
+
+  const duration = formatDuration(event.durationMinutes);
+
+  return (
+    <Layout title={editing ? 'Редактирование' : event.title} backTo="/">
+      <div className="event-detail">
+        {editing ? (
+          <form className="event-form event-detail__edit-form" onSubmit={handleSaveEdit}>
+            <label className="field">
+              <span>Название *</span>
+              <input
+                type="text"
+                required
+                maxLength={200}
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+              />
+            </label>
+
+            <label className="field">
+              <span>Дата и время *</span>
+              <input
+                type="datetime-local"
+                required
+                value={editStartsAtLocal}
+                onChange={(e) => setEditStartsAtLocal(e.target.value)}
+              />
+            </label>
+
+            <label className="field">
+              <span>Описание</span>
+              <textarea
+                rows={3}
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Дополнительные детали"
+              />
+            </label>
+
+            {editError && <div className="error-box">{editError}</div>}
+
+            <div className="event-detail__edit-actions">
+              <button type="submit" className="btn btn--primary" disabled={saving}>
+                {saving ? 'Сохранение…' : 'Сохранить'}
+              </button>
+              <button type="button" className="btn btn--ghost" disabled={saving} onClick={cancelEditing}>
+                Отмена
+              </button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <EventDateTime startsAt={event.startsAt} className="event-detail__datetime" />
+            {duration && <p className="event-detail__duration">⏱ {duration}</p>}
+            {event.location && <p className="event-detail__location">📍 {event.location}</p>}
+            {event.description && <p className="event-detail__description">{event.description}</p>}
+            <p className="event-detail__author">
+              Организатор: <ParticipantNameLink user={event.createdBy} />
+            </p>
+          </>
+        )}
+
+        <section className="participants-section">
+          <h3>Ваш ответ</h3>
+          <RsvpButtons value={event.myRsvp} onChange={handleRsvp} />
+        </section>
+
+        {event.participants.going.length > 0 && (
+          <section className="participants-section">
+            <h3>Идут ({event.participants.going.length})</h3>
+            <ul className="participants-list">
+              {event.participants.going.map((p) => (
+                <li key={p.id}>
+                  <ParticipantNameLink user={p} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {event.participants.maybe.length > 0 && (
+          <section className="participants-section">
+            <h3>Возможно ({event.participants.maybe.length})</h3>
+            <ul className="participants-list">
+              {event.participants.maybe.map((p) => (
+                <li key={p.id}>
+                  <ParticipantNameLink user={p} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {canModify && !editing && (
+          <div className="event-detail__owner-actions">
+            <button type="button" className="btn btn--secondary" onClick={startEditing}>
+              Редактировать
+            </button>
+            <button
+              type="button"
+              className="btn btn--danger"
+              disabled={deleting}
+              onClick={handleDelete}
+            >
+              {deleting ? 'Удаление…' : 'Удалить событие'}
+            </button>
+          </div>
+        )}
+      </div>
+    </Layout>
+  );
+}
