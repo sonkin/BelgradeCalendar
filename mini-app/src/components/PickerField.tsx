@@ -1,5 +1,7 @@
-import { useId, useRef, useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
+import { normalizeBelgradeTimeInput } from '../utils/dates';
 import { CalendarPopover } from './CalendarPopover';
+import { TimePopover } from './TimePopover';
 
 type Props = {
   label: string;
@@ -9,7 +11,6 @@ type Props = {
   icon: ReactNode;
   iconLabel: string;
   onIconClick?: () => void;
-  iconSlot?: ReactNode;
   trailing?: ReactNode;
   popover?: ReactNode;
 };
@@ -22,7 +23,6 @@ function PickerFieldShell({
   icon,
   iconLabel,
   onIconClick,
-  iconSlot,
   trailing,
   popover,
 }: Props) {
@@ -42,20 +42,18 @@ function PickerFieldShell({
       <div className="picker-field__control">
         {children}
         {trailing}
-        {iconSlot ?? (
-          <button
-            type="button"
-            className="picker-field__icon"
-            aria-label={iconLabel}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onIconClick?.();
-            }}
-          >
-            {icon}
-          </button>
-        )}
+        <button
+          type="button"
+          className="picker-field__icon"
+          aria-label={iconLabel}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onIconClick?.();
+          }}
+        >
+          {icon}
+        </button>
         {popover}
       </div>
     </div>
@@ -86,15 +84,6 @@ function ClearIcon() {
       <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
-}
-
-function openNativeTimePicker(input: HTMLInputElement | null): void {
-  if (!input) return;
-  try {
-    input.showPicker?.();
-  } catch {
-    input.focus();
-  }
 }
 
 type DatePickerFieldProps = {
@@ -133,7 +122,7 @@ export function DatePickerField({
         type="text"
         readOnly
         required={required}
-        className="picker-field__input"
+        className="picker-field__input picker-field__input--picker"
         placeholder="дд.мм.гггг"
         value={value}
         onClick={() => setOpen(true)}
@@ -149,31 +138,20 @@ type TimePickerFieldProps = {
 };
 
 export function TimePickerField({ label = 'Время', value, onChange }: TimePickerFieldProps) {
-  const nativeRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
   const hasTime = Boolean(value.trim());
-
-  const openPicker = () => openNativeTimePicker(nativeRef.current);
 
   return (
     <PickerFieldShell
       label={label}
-      hint="Необязательно — оставьте пустым, если время уточняется позже"
+      hint="Необязательно — введите чч:мм или выберите по иконке"
       icon={<ClockIcon />}
       iconLabel="Выбрать время"
-      iconSlot={
-        <div className="picker-field__icon-slot" aria-label="Выбрать время">
-          <span className="picker-field__icon-visual" aria-hidden>
-            <ClockIcon />
-          </span>
-          <input
-            ref={nativeRef}
-            type="time"
-            className="picker-field__native-overlay"
-            aria-label="Выбрать время"
-            value={hasTime ? value : '12:00'}
-            onChange={(e) => onChange(e.target.value)}
-          />
-        </div>
+      onIconClick={() => setOpen((v) => !v)}
+      popover={
+        open ? (
+          <TimePopover value={value} onChange={onChange} onClose={() => setOpen(false)} />
+        ) : null
       }
       trailing={
         hasTime ? (
@@ -193,11 +171,13 @@ export function TimePickerField({ label = 'Время', value, onChange }: TimeP
     >
       <input
         type="text"
-        readOnly
-        className={`picker-field__input picker-field__input--time${hasTime ? '' : ' picker-field__input--empty'}`}
-        placeholder="не указано"
-        value={hasTime ? value : ''}
-        onClick={openPicker}
+        inputMode="numeric"
+        autoComplete="off"
+        className="picker-field__input picker-field__input--time picker-field__input--editable"
+        placeholder="чч:мм"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={(e) => onChange(normalizeBelgradeTimeInput(e.target.value))}
       />
     </PickerFieldShell>
   );

@@ -341,6 +341,30 @@ export function belgradeTodayYmd(): { year: number; month: number; day: number }
   return { year, month, day };
 }
 
+export function parseBelgradeTimeParts(value: string): { hour: number; minute: number } {
+  const match = BELGRADE_TIME_RE.exec(value.trim());
+  if (!match) {
+    return { hour: 12, minute: 0 };
+  }
+  return { hour: Number(match[1]), minute: Number(match[2]) };
+}
+
+/** Нормализация ввода времени в чч:мм при потере фокуса */
+export function normalizeBelgradeTimeInput(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+
+  const match = /^(\d{1,2})(?::(\d{1,2}))?$/.exec(trimmed);
+  if (!match) return '';
+
+  const hour = Number(match[1]);
+  const minute = match[2] !== undefined ? Number(match[2]) : 0;
+  if (hour > 23 || minute > 59) return '';
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(hour)}:${pad(minute)}`;
+}
+
 export function formatDuration(minutes: number | null): string | null {
   if (!minutes) return null;
   const hours = Math.floor(minutes / 60);

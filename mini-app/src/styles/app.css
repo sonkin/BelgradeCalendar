@@ -637,58 +637,22 @@ textarea {
   color: var(--app-text);
   font-size: 16px;
   min-height: 48px;
+}
+
+.picker-field__input::placeholder {
+  color: var(--app-hint);
+}
+
+.picker-field__input--picker {
   cursor: pointer;
 }
 
-.picker-field__input--empty {
-  color: var(--app-hint);
+.picker-field__input--editable {
+  cursor: text;
 }
 
 .picker-field__input--time {
   padding-right: 80px;
-}
-
-.picker-field__icon-slot {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 4;
-  width: 48px;
-}
-
-.picker-field__icon-visual {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--app-link);
-  pointer-events: none;
-}
-
-.picker-field__native-overlay {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  border: none;
-  opacity: 0;
-  cursor: pointer;
-  z-index: 1;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.picker-field__native-overlay::-webkit-calendar-picker-indicator {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  cursor: pointer;
 }
 
 .picker-field__clear {
@@ -821,6 +785,49 @@ textarea {
 
 .calendar-popover__day:not(.calendar-popover__day--outside):active {
   opacity: 0.85;
+}
+
+.time-popover {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 30;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--app-border);
+  background: var(--app-secondary-bg);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--app-text) 18%, transparent);
+}
+
+.time-popover__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.time-popover__label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--app-hint);
+}
+
+.time-popover__select {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-size: 18px;
+}
+
+.time-popover__apply {
+  margin-top: 4px;
 }
 
 .field textarea {
