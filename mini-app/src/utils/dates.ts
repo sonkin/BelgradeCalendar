@@ -113,6 +113,57 @@ export function sortEventsByStart<T extends { startsAt: string }>(events: T[]): 
   return [...events].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 }
 
+export function eventMonthKey(iso: string): string {
+  return dayKey(iso).slice(0, 7);
+}
+
+export function currentBelgradeMonthKey(): string {
+  return dayKey(new Date().toISOString()).slice(0, 7);
+}
+
+/** Текущий месяц + 11 следующих (12 всего) */
+export const LIST_MONTH_COUNT = 12;
+
+export function belgradeMonthKeyByOffset(offset: number): string {
+  const w = belgradeWallTimeParts(new Date());
+  let month = w.month + offset;
+  let year = w.year;
+  while (month > 12) {
+    month -= 12;
+    year += 1;
+  }
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+export function listSelectableMonthKeys(): string[] {
+  return Array.from({ length: LIST_MONTH_COUNT }, (_, i) => belgradeMonthKeyByOffset(i));
+}
+
+export function formatMonthLabel(monthKey: string): string {
+  const [year, month] = monthKey.split('-').map(Number);
+  const label = new Intl.DateTimeFormat('ru-RU', {
+    timeZone: TIMEZONE,
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(Date.UTC(year, month - 1, 1)));
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+export function formatCompactEventSchedule(iso: string, timeUnset: boolean): string {
+  const date = formatEventDate(iso);
+  if (timeUnset) {
+    return `${date}, время уточняется`;
+  }
+  return `${date}, ${formatEventTime(iso)}`;
+}
+
+export function filterEventsByMonthKey<T extends { startsAt: string }>(
+  events: T[],
+  monthKey: string,
+): T[] {
+  return events.filter((event) => eventMonthKey(event.startsAt) === monthKey);
+}
+
 export function groupEventsByDay<T extends { startsAt: string }>(events: T[]): Map<string, T[]> {
   const groups = new Map<string, T[]>();
 
