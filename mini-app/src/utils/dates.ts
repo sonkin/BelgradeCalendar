@@ -95,8 +95,9 @@ export function getDateDisplay(iso: string): DateDisplay {
   };
 }
 
+/** Ключ дня для группировки: YYYY-MM-DD (Belgrade), чтобы сортировка была хронологической */
 export function dayKey(iso: string): string {
-  return formatEventDate(iso);
+  return belgradeDateKey(new Date(iso));
 }
 
 /** @deprecated use getDateDisplay / formatWeekdayDate in UI */
@@ -104,10 +105,14 @@ export function dayLabel(iso: string): string {
   return formatWeekdayDate(iso);
 }
 
+export function sortEventsByStart<T extends { startsAt: string }>(events: T[]): T[] {
+  return [...events].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+}
+
 export function groupEventsByDay<T extends { startsAt: string }>(events: T[]): Map<string, T[]> {
   const groups = new Map<string, T[]>();
 
-  for (const event of events) {
+  for (const event of sortEventsByStart(events)) {
     const key = dayKey(event.startsAt);
     const list = groups.get(key) ?? [];
     list.push(event);

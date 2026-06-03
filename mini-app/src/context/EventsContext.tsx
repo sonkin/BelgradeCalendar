@@ -10,6 +10,7 @@ import {
 import { fetchEvents } from '../api/client';
 import type { EventDetail, EventListItem } from '../types';
 import { detailToListItem, isUpcomingEvent } from '../utils/eventMappers';
+import { sortEventsByStart } from '../utils/dates';
 
 function isEventDetail(event: EventListItem | EventDetail): event is EventDetail {
   return 'notGoing' in event.participants;
@@ -21,7 +22,7 @@ function readCache(): EventListItem[] {
   try {
     const raw = sessionStorage.getItem(CACHE_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as EventListItem[];
+    return sortEventsByStart(JSON.parse(raw) as EventListItem[]);
   } catch {
     return [];
   }
@@ -60,8 +61,9 @@ export function EventsProvider({
   const [error, setError] = useState<string | null>(null);
 
   const persist = useCallback((next: EventListItem[]) => {
-    setEvents(next);
-    writeCache(next);
+    const sorted = sortEventsByStart(next);
+    setEvents(sorted);
+    writeCache(sorted);
   }, []);
 
   const refresh = useCallback(async () => {
@@ -91,9 +93,9 @@ export function EventsProvider({
     const item = isEventDetail(event) ? detailToListItem(event) : event;
 
     setEvents((prev) => {
-      const next = [...prev.filter((existing) => existing.id !== item.id), item]
-        .filter(isUpcomingEvent)
-        .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+      const next = sortEventsByStart(
+        [...prev.filter((existing) => existing.id !== item.id), item].filter(isUpcomingEvent),
+      );
       writeCache(next);
       return next;
     });

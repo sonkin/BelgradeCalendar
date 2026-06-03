@@ -59,7 +59,7 @@ export function EventListPage() {
   );
 
   const sortedGroups = useMemo(() => {
-    return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b));
+    return [...grouped.entries()].sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
   }, [grouped]);
 
   const showEmpty = !initialLoading && !error && events.length === 0;
