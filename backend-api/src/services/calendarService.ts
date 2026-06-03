@@ -6,8 +6,12 @@ import { EventParticipant } from '../models/EventParticipant.js';
 import { User, type IUser } from '../models/User.js';
 import type { CalendarFeedFilter, CalendarFeedsDto } from '../types/index.js';
 import { AppError } from '../utils/errors.js';
-
-const DEFAULT_DURATION_MINUTES = 120;
+import {
+  belgradeStartOfNextDay,
+  DEFAULT_DURATION_MINUTES,
+  eventEndTime,
+  isUpcomingEvent,
+} from '../utils/eventTiming.js';
 const FEED_CALENDAR_NAME = 'Belgrade Friends Calendar';
 const FEED_GOING_CALENDAR_NAME = 'Belgrade Friends — Иду';
 
@@ -85,15 +89,6 @@ async function loadFeedEvents(filter: CalendarFeedFilter, userId: string): Promi
   );
 }
 
-function eventEndTime(event: IEvent): Date {
-  const durationMinutes = event.durationMinutes ?? DEFAULT_DURATION_MINUTES;
-  return new Date(event.startsAt.getTime() + durationMinutes * 60 * 1000);
-}
-
-function isUpcomingEvent(event: IEvent, now = new Date()): boolean {
-  return eventEndTime(event) > now;
-}
-
 function eventSequence(event: IEvent): number {
   const updatedAt = event.updatedAt ?? event.createdAt;
   return Math.max(0, Math.floor(updatedAt.getTime() / 1000));
@@ -114,15 +109,28 @@ export async function buildCalendarFeedIcs(
   });
 
   for (const event of events) {
-    calendar.createEvent({
+    const base = {
       id: `event-${event._id.toString()}@belca.jtutor.app`,
-      start: event.startsAt,
-      end: eventEndTime(event),
       summary: event.title,
       location: event.location ?? undefined,
       description: event.description ?? undefined,
       sequence: eventSequence(event),
-    });
+    };
+
+    if (event.timeUnset) {
+      calendar.createEvent({
+        ...base,
+        start: event.startsAt,
+        end: belgradeStartOfNextDay(event.startsAt),
+        allDay: true,
+      });
+    } else {
+      calendar.createEvent({
+        ...base,
+        start: event.startsAt,
+        end: eventEndTime(event),
+      });
+    }
   }
 
   return calendar.toString();

@@ -2,12 +2,18 @@ import { getDateDisplay } from '../utils/dates';
 
 interface EventDateTimeProps {
   startsAt: string;
+  timeUnset?: boolean;
   className?: string;
   compact?: boolean;
 }
 
-export function EventDateTime({ startsAt, className = '', compact = false }: EventDateTimeProps) {
-  const { weekdayDate, relative, time } = getDateDisplay(startsAt);
+export function EventDateTime({
+  startsAt,
+  timeUnset = false,
+  className = '',
+  compact = false,
+}: EventDateTimeProps) {
+  const { weekdayDate, relative, time } = getDateDisplay(startsAt, timeUnset);
 
   return (
     <div
@@ -15,7 +21,11 @@ export function EventDateTime({ startsAt, className = '', compact = false }: Eve
     >
       <span className="event-datetime__weekday-date">{weekdayDate}</span>
       <span className="event-datetime__relative">{relative}</span>
-      <span className="event-datetime__time">{time}</span>
+      {time ? (
+        <span className="event-datetime__time">{time}</span>
+      ) : (
+        <span className="event-datetime__time event-datetime__time--unset">время уточняется</span>
+      )}
     </div>
   );
 }

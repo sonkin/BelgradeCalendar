@@ -5,6 +5,7 @@ const eventSchema = new Schema(
     title: { type: String, required: true, trim: true, maxlength: 200 },
     description: { type: String, default: null },
     startsAt: { type: Date, required: true, index: true },
+    timeUnset: { type: Boolean, default: false },
     durationMinutes: { type: Number, default: null, min: 1 },
     location: { type: String, default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },

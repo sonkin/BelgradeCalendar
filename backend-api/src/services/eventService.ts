@@ -11,17 +11,15 @@ import type {
 } from '../types/index.js';
 import { AppError } from '../utils/errors.js';
 import { toParticipantUserDto } from '../utils/participantDto.js';
-import { postEventAnnouncement, postEventUpdateNotification } from './telegramBot.js';
+import { postEventAnnouncement } from './telegramBot.js';
+import {
+  belgradeMidnightOnSameDay,
+  DEFAULT_DURATION_MINUTES,
+  isUpcomingEvent,
+} from '../utils/eventTiming.js';
 
-const DEFAULT_DURATION_MINUTES = 120;
-
-function eventEndTime(event: IEvent): Date {
-  const durationMinutes = event.durationMinutes ?? DEFAULT_DURATION_MINUTES;
-  return new Date(event.startsAt.getTime() + durationMinutes * 60 * 1000);
-}
-
-function isUpcomingEvent(event: IEvent, now = new Date()): boolean {
-  return eventEndTime(event) > now;
+function resolveStartsAt(startsAt: Date, timeUnset: boolean): Date {
+  return timeUnset ? belgradeMidnightOnSameDay(startsAt) : startsAt;
 }
 
 async function getParticipantsForList(
@@ -178,6 +176,7 @@ export async function listEvents(
       title: event.title,
       description: event.description ?? null,
       startsAt: event.startsAt.toISOString(),
+      timeUnset: Boolean(event.timeUnset),
       durationMinutes: event.durationMinutes ?? null,
       location: event.location ?? null,
       createdBy: toParticipantUserDto(creator),
@@ -222,6 +221,7 @@ export async function getEventById(eventId: string, currentUserId: string): Prom
     title: event.title,
     description: event.description ?? null,
     startsAt: event.startsAt.toISOString(),
+    timeUnset: Boolean(event.timeUnset),
     durationMinutes: event.durationMinutes ?? null,
     location: event.location ?? null,
     createdBy: toParticipantUserDto(creator),
@@ -232,12 +232,14 @@ export async function getEventById(eventId: string, currentUserId: string): Prom
 
 export async function createEvent(body: CreateEventBody, user: IUser): Promise<EventDetailDto> {
   const title = validateTitle(body.title);
-  const startsAt = parseDate(body.startsAt, 'startsAt');
+  const timeUnset = Boolean(body.timeUnset);
+  const startsAt = resolveStartsAt(parseDate(body.startsAt, 'startsAt'), timeUnset);
   const durationMinutes = validateDuration(body.durationMinutes);
 
   const event = await Event.create({
     title,
     startsAt,
+    timeUnset,
     durationMinutes,
     location: body.location?.trim() || null,
     description: body.description?.trim() || null,
@@ -274,15 +276,16 @@ export async function updateEvent(
     throw new AppError(403, 'Недостаточно прав для редактирования события');
   }
 
-  const previousTitle = event.title;
-  const previousStartsAt = event.startsAt.getTime();
-  const previousDescription = event.description ?? null;
-
   if (body.title !== undefined) {
     event.title = validateTitle(body.title);
   }
+  if (body.timeUnset !== undefined) {
+    event.timeUnset = Boolean(body.timeUnset);
+  }
   if (body.startsAt !== undefined) {
-    event.startsAt = parseDate(body.startsAt, 'startsAt');
+    event.startsAt = resolveStartsAt(parseDate(body.startsAt, 'startsAt'), Boolean(event.timeUnset));
+  } else if (body.timeUnset !== undefined && event.timeUnset) {
+    event.startsAt = belgradeMidnightOnSameDay(event.startsAt);
   }
   if (body.durationMinutes !== undefined) {
     event.durationMinutes = validateDuration(body.durationMinutes);
@@ -295,19 +298,6 @@ export async function updateEvent(
   }
 
   await event.save();
-
-  const eventChanged =
-    event.title !== previousTitle ||
-    event.startsAt.getTime() !== previousStartsAt ||
-    (event.description ?? null) !== previousDescription;
-
-  if (eventChanged) {
-    try {
-      await postEventUpdateNotification(event);
-    } catch (error) {
-      console.error('Failed to post event update notification to Telegram:', error);
-    }
-  }
 
   return getEventById(event._id.toString(), user._id.toString());
 }

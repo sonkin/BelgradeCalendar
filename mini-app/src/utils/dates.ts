@@ -87,12 +87,16 @@ export function formatRelativeUntil(iso: string): string {
   return `через ${parts.join(' и ')}`;
 }
 
-export function getDateDisplay(iso: string): DateDisplay {
+export function getDateDisplay(iso: string, timeUnset = false): DateDisplay {
   return {
     weekdayDate: formatWeekdayDate(iso),
     relative: formatRelativeUntil(iso),
-    time: formatEventTime(iso),
+    time: timeUnset ? '' : formatEventTime(iso),
   };
+}
+
+export function formatEventTimeLabel(iso: string, timeUnset: boolean): string {
+  return timeUnset ? 'время уточняется' : formatEventTime(iso);
 }
 
 /** Ключ дня для группировки: YYYY-MM-DD (Belgrade), чтобы сортировка была хронологической */
@@ -122,23 +126,133 @@ export function groupEventsByDay<T extends { startsAt: string }>(events: T[]): M
   return groups;
 }
 
-export function localDatetimeToIso(localValue: string): string {
-  return new Date(localValue).toISOString();
+export interface BelgradeDatetimeParts {
+  date: string;
+  time: string;
 }
 
-export function isoToLocalDatetime(iso: string): string {
-  const date = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+const BELGRADE_DATE_RE = /^(\d{2})\.(\d{2})\.(\d{4})$/;
+const BELGRADE_TIME_RE = /^(\d{2}):(\d{2})$/;
+
+function belgradeWallTimeParts(d: Date): {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+} {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(d);
+
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((p) => p.type === type)?.value ?? '0');
+
+  return {
+    year: get('year'),
+    month: get('month'),
+    day: get('day'),
+    hour: get('hour'),
+    minute: get('minute'),
+  };
 }
 
-export function defaultDatetimeLocal(): string {
-  const now = new Date();
-  now.setMinutes(now.getMinutes() + 60 - (now.getMinutes() % 30));
-  now.setSeconds(0, 0);
-
+export function isoToBelgradeParts(iso: string, timeUnset = false): BelgradeDatetimeParts {
+  const w = belgradeWallTimeParts(new Date(iso));
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  return {
+    date: `${pad(w.day)}.${pad(w.month)}.${w.year}`,
+    time: timeUnset ? '' : `${pad(w.hour)}:${pad(w.minute)}`,
+  };
+}
+
+function belgradeLocalToIso(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+): string {
+  const rough = Date.UTC(year, month - 1, day, hour - 2, minute);
+  for (let offsetMs = -6 * 3600000; offsetMs <= 6 * 3600000; offsetMs += 60000) {
+    const candidate = new Date(rough + offsetMs);
+    const w = belgradeWallTimeParts(candidate);
+    if (w.year === year && w.month === month && w.day === day && w.hour === hour && w.minute === minute) {
+      return candidate.toISOString();
+    }
+  }
+  throw new Error('Некорректная дата или время');
+}
+
+/** Конец календарного дня в Белграде (exclusive), для фильтра «предстоящие» */
+export function belgradeEndOfDayIso(iso: string): string {
+  const { date } = isoToBelgradeParts(iso, true);
+  const match = BELGRADE_DATE_RE.exec(date);
+  if (!match) {
+    return new Date(new Date(iso).getTime() + 86400000).toISOString();
+  }
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  return belgradeLocalToIso(year, month, day + 1, 0, 0);
+}
+
+export function belgradeDateToIso(date: string): string {
+  const dateMatch = BELGRADE_DATE_RE.exec(date.trim());
+  if (!dateMatch) {
+    throw new Error('Укажите дату в формате дд.мм.гггг');
+  }
+  const day = Number(dateMatch[1]);
+  const month = Number(dateMatch[2]);
+  const year = Number(dateMatch[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    throw new Error('Некорректная дата');
+  }
+  return belgradeLocalToIso(year, month, day, 0, 0);
+}
+
+export function belgradePartsToIso(parts: BelgradeDatetimeParts): string {
+  const timeTrimmed = parts.time.trim();
+  if (!timeTrimmed) {
+    return belgradeDateToIso(parts.date);
+  }
+
+  const dateMatch = BELGRADE_DATE_RE.exec(parts.date.trim());
+  const timeMatch = BELGRADE_TIME_RE.exec(timeTrimmed);
+  if (!dateMatch || !timeMatch) {
+    throw new Error('Укажите дату в формате дд.мм.гггг и время в формате чч:мм');
+  }
+
+  const day = Number(dateMatch[1]);
+  const month = Number(dateMatch[2]);
+  const year = Number(dateMatch[3]);
+  const hour = Number(timeMatch[1]);
+  const minute = Number(timeMatch[2]);
+
+  if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59) {
+    throw new Error('Некорректная дата или время');
+  }
+
+  return belgradeLocalToIso(year, month, day, hour, minute);
+}
+
+export function belgradePartsToPayload(parts: BelgradeDatetimeParts): { startsAt: string; timeUnset: boolean } {
+  const timeUnset = !parts.time.trim();
+  return {
+    startsAt: timeUnset ? belgradeDateToIso(parts.date) : belgradePartsToIso(parts),
+    timeUnset,
+  };
+}
+
+export function defaultBelgradeDatetimeParts(): BelgradeDatetimeParts {
+  const p = isoToBelgradeParts(new Date().toISOString());
+  return { date: p.date, time: '' };
 }
 
 export function formatDuration(minutes: number | null): string | null {

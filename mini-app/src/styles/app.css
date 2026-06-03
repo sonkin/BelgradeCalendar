@@ -430,6 +430,12 @@ textarea {
   resize: vertical;
 }
 
+.event-card__time--unset,
+.event-datetime__time--unset {
+  color: var(--app-hint);
+  font-style: italic;
+}
+
 .participant-name-link {
   display: inline;
   padding: 0;

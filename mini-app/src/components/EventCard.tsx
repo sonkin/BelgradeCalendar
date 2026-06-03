@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { EventListItem, RsvpStatus } from '../types';
-import { formatEventTime } from '../utils/dates';
+import { formatEventTimeLabel } from '../utils/dates';
 import { saveListScrollPosition } from '../utils/scrollRestoration';
 import { ParticipantNames } from './ParticipantNames';
 import { RsvpButtons } from './RsvpButtons';
@@ -21,7 +21,11 @@ export function EventCard({ event, onRsvpChange }: EventCardProps) {
         className="event-card__link"
         onClick={saveListScrollPosition}
       >
-        <div className="event-card__time">{formatEventTime(event.startsAt)}</div>
+        <div
+          className={`event-card__time${event.timeUnset ? ' event-card__time--unset' : ''}`}
+        >
+          {formatEventTimeLabel(event.startsAt, event.timeUnset)}
+        </div>
         <div className="event-card__title">{event.title}</div>
         {event.location && <div className="event-card__location">📍 {event.location}</div>}
         {going.length > 0 && (

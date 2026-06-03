@@ -1,15 +1,16 @@
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createEvent } from '../api/client';
+import { DatetimeField } from '../components/DatetimeField';
 import { Layout } from '../components/Layout';
 import { useEvents } from '../context/EventsContext';
-import { defaultDatetimeLocal, localDatetimeToIso } from '../utils/dates';
+import { belgradePartsToPayload, defaultBelgradeDatetimeParts } from '../utils/dates';
 
 export function CreateEventPage() {
   const navigate = useNavigate();
   const { upsertEvent } = useEvents();
   const [title, setTitle] = useState('');
-  const [startsAtLocal, setStartsAtLocal] = useState(defaultDatetimeLocal());
+  const [startsAt, setStartsAt] = useState(defaultBelgradeDatetimeParts());
   const [location, setLocation] = useState('');
   const [durationMinutes, setDurationMinutes] = useState('');
   const [description, setDescription] = useState('');
@@ -24,7 +25,7 @@ export function CreateEventPage() {
     try {
       const event = await createEvent({
         title: title.trim(),
-        startsAt: localDatetimeToIso(startsAtLocal),
+        ...belgradePartsToPayload(startsAt),
         location: location.trim() || null,
         description: description.trim() || null,
         durationMinutes: durationMinutes ? Number(durationMinutes) : null,
@@ -39,6 +40,7 @@ export function CreateEventPage() {
       navigate(`/events/${event.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось создать событие');
+    } finally {
       setSubmitting(false);
     }
   };
@@ -58,15 +60,7 @@ export function CreateEventPage() {
           />
         </label>
 
-        <label className="field">
-          <span>Дата и время *</span>
-          <input
-            type="datetime-local"
-            required
-            value={startsAtLocal}
-            onChange={(e) => setStartsAtLocal(e.target.value)}
-          />
-        </label>
+        <DatetimeField value={startsAt} onChange={setStartsAt} />
 
         <label className="field">
           <span>Место</span>

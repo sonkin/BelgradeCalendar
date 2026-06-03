@@ -31,6 +31,7 @@ export interface EventListItem {
   title: string;
   description: string | null;
   startsAt: string;
+  timeUnset: boolean;
   durationMinutes: number | null;
   location: string | null;
   createdBy: ParticipantUser;
@@ -43,6 +44,7 @@ export interface EventDetail {
   title: string;
   description: string | null;
   startsAt: string;
+  timeUnset: boolean;
   durationMinutes: number | null;
   location: string | null;
   createdBy: ParticipantUser;
@@ -57,6 +59,7 @@ export interface EventDetail {
 export interface CreateEventPayload {
   title: string;
   startsAt: string;
+  timeUnset?: boolean;
   durationMinutes?: number | null;
   location?: string | null;
   description?: string | null;
@@ -65,6 +68,7 @@ export interface CreateEventPayload {
 export interface UpdateEventPayload {
   title?: string;
   startsAt?: string;
+  timeUnset?: boolean;
   description?: string | null;
 }
 

@@ -19,28 +19,16 @@ function formatEventTime(startsAt: Date): string {
   }).format(startsAt);
 }
 
-export function formatEventAnnouncementText(event: IEvent): string {
-  const lines = [
-    `Новое событие: ${event.title}`,
-    `${formatEventDate(event.startsAt)}, ${formatEventTime(event.startsAt)} (Белград)`,
-  ];
-
-  if (event.location) {
-    lines.push(`📍 ${event.location}`);
+function formatEventWhen(event: IEvent): string {
+  const date = formatEventDate(event.startsAt);
+  if (event.timeUnset) {
+    return `${date} (Белград, время уточняется)`;
   }
-
-  if (event.description) {
-    lines.push(event.description);
-  }
-
-  return lines.join('\n');
+  return `${date}, ${formatEventTime(event.startsAt)} (Белград)`;
 }
 
-export function formatEventUpdateText(event: IEvent): string {
-  const lines = [
-    `Событие изменено: ${event.title}`,
-    `${formatEventDate(event.startsAt)}, ${formatEventTime(event.startsAt)} (Белград)`,
-  ];
+export function formatEventAnnouncementText(event: IEvent): string {
+  const lines = [`Новое событие: ${event.title}`, formatEventWhen(event)];
 
   if (event.location) {
     lines.push(`📍 ${event.location}`);
@@ -103,35 +91,4 @@ export async function postEventAnnouncement(event: IEvent, _creator: IUser): Pro
   }
 
   return data.result.message_id;
-}
-
-export async function postEventUpdateNotification(event: IEvent): Promise<void> {
-  if (!config.telegramChatId) {
-    console.warn('TELEGRAM_CHAT_ID not set — skipping Telegram update notification');
-    return;
-  }
-
-  const eventId = event._id.toString();
-  const payload: Record<string, unknown> = {
-    chat_id: config.telegramChatId,
-    text: formatEventUpdateText(event),
-  };
-
-  if (config.webappUrl.startsWith('https://')) {
-    payload.reply_markup = {
-      inline_keyboard: [[buildOpenCalendarButton(eventId)]],
-    };
-  }
-
-  const response = await fetch(`https://api.telegram.org/bot${config.botToken}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  const data = (await response.json()) as TelegramSendMessageResponse;
-
-  if (!data.ok) {
-    throw new Error(data.description ?? 'Telegram sendMessage failed');
-  }
 }

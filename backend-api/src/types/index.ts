@@ -55,6 +55,7 @@ export interface EventListItemDto {
   title: string;
   description: string | null;
   startsAt: string;
+  timeUnset: boolean;
   durationMinutes: number | null;
   location: string | null;
   createdBy: ParticipantUserDto;
@@ -74,6 +75,7 @@ export interface EventDetailDto extends Omit<EventListItemDto, 'participants' | 
 export interface CreateEventBody {
   title: string;
   startsAt: string;
+  timeUnset?: boolean;
   durationMinutes?: number | null;
   location?: string | null;
   description?: string | null;
@@ -82,6 +84,7 @@ export interface CreateEventBody {
 export interface UpdateEventBody {
   title?: string;
   startsAt?: string;
+  timeUnset?: boolean;
   durationMinutes?: number | null;
   location?: string | null;
   description?: string | null;

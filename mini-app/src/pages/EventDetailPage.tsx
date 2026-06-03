@@ -3,13 +3,14 @@ import WebApp from '@twa-dev/sdk';
 import { useNavigate, useParams } from 'react-router-dom';
 import { deleteEvent, fetchEvent, updateEvent, updateRsvp } from '../api/client';
 import { EventDateTime } from '../components/EventDateTime';
+import { DatetimeField } from '../components/DatetimeField';
 import { Layout } from '../components/Layout';
 import { ParticipantNameLink } from '../components/ParticipantNameLink';
 import { RsvpButtons } from '../components/RsvpButtons';
 import { useAuth } from '../context/AuthContext';
 import { useEvents } from '../context/EventsContext';
 import type { EventDetail, RsvpStatus } from '../types';
-import { formatDuration, isoToLocalDatetime, localDatetimeToIso } from '../utils/dates';
+import { belgradePartsToPayload, formatDuration, isoToBelgradeParts } from '../utils/dates';
 import { listItemToDetail } from '../utils/eventMappers';
 import { applyDetailRsvp, userAsParticipant } from '../utils/rsvp';
 
@@ -27,7 +28,7 @@ export function EventDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
-  const [editStartsAtLocal, setEditStartsAtLocal] = useState('');
+  const [editStartsAt, setEditStartsAt] = useState({ date: '', time: '' });
   const [editDescription, setEditDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -69,7 +70,7 @@ export function EventDetailPage() {
   const startEditing = () => {
     if (!event) return;
     setEditTitle(event.title);
-    setEditStartsAtLocal(isoToLocalDatetime(event.startsAt));
+    setEditStartsAt(isoToBelgradeParts(event.startsAt, event.timeUnset));
     setEditDescription(event.description ?? '');
     setEditError(null);
     setEditing(true);
@@ -96,7 +97,7 @@ export function EventDetailPage() {
     try {
       const updated = await updateEvent(id, {
         title,
-        startsAt: localDatetimeToIso(editStartsAtLocal),
+        ...belgradePartsToPayload(editStartsAt),
         description: editDescription.trim() || null,
       });
       setEvent(updated);
@@ -181,15 +182,7 @@ export function EventDetailPage() {
               />
             </label>
 
-            <label className="field">
-              <span>Дата и время *</span>
-              <input
-                type="datetime-local"
-                required
-                value={editStartsAtLocal}
-                onChange={(e) => setEditStartsAtLocal(e.target.value)}
-              />
-            </label>
+            <DatetimeField value={editStartsAt} onChange={setEditStartsAt} />
 
             <label className="field">
               <span>Описание</span>
@@ -214,7 +207,11 @@ export function EventDetailPage() {
           </form>
         ) : (
           <>
-            <EventDateTime startsAt={event.startsAt} className="event-detail__datetime" />
+            <EventDateTime
+              startsAt={event.startsAt}
+              timeUnset={event.timeUnset}
+              className="event-detail__datetime"
+            />
             {duration && <p className="event-detail__duration">⏱ {duration}</p>}
             {event.location && <p className="event-detail__location">📍 {event.location}</p>}
             {event.description && <p className="event-detail__description">{event.description}</p>}
