@@ -47,6 +47,9 @@ export async function startTelegramBot(app: Express): Promise<void> {
   await registerBotCommands(bot);
   await setupMenuButton(bot);
   console.log('Menu button configured →', config.webappUrl);
+  console.log(
+    `Telegram bot mode: ${config.botUsePolling ? 'polling' : 'webhook'} (BOT_USE_POLLING=${process.env.BOT_USE_POLLING ?? 'unset'}, BOT_WEBHOOK_URL=${config.botWebhookUrl || 'unset'})`,
+  );
 
   if (config.botUsePolling) {
     await bot.api.deleteWebhook({ drop_pending_updates: true });
@@ -82,10 +85,16 @@ export async function startTelegramBot(app: Express): Promise<void> {
   });
 
   const info = await bot.api.getWebhookInfo();
-  console.log('Telegram bot: webhook →', config.botWebhookUrl);
-  console.log('Express route: POST /bot/webhook (nginx: /api/ → :3000/)');
+  console.log('Telegram bot: webhook registered →', info.url || config.botWebhookUrl);
+  console.log('Express route: POST /bot/webhook (public: /api/bot/webhook)');
+  if (!info.url) {
+    console.error('setWebhook did not stick — check BOT_TOKEN and pm2 logs');
+  }
   if (info.last_error_message) {
     console.warn('Webhook last error:', info.last_error_message);
+  }
+  if (info.pending_update_count > 0) {
+    console.log(`Webhook pending updates: ${info.pending_update_count}`);
   }
 
   app.get('/bot/webhook', (_req, res) => {

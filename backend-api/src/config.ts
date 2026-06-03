@@ -31,6 +31,13 @@ function parseAdminIds(raw: string | undefined): number[] {
     });
 }
 
+function resolveBotUsePolling(): boolean {
+  const flag = process.env.BOT_USE_POLLING?.trim().toLowerCase();
+  if (flag === 'true') return true;
+  if (flag === 'false') return false;
+  return !process.env.BOT_WEBHOOK_URL?.startsWith('https://');
+}
+
 export const config = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: Number(process.env.PORT ?? 3000),
@@ -44,8 +51,7 @@ export const config = {
   apiPublicUrl: (process.env.API_PUBLIC_URL ?? 'http://localhost:3000').replace(/\/$/, ''),
   botUsername: process.env.BOT_USERNAME ?? 'BelgradeCalendarBot',
   botWebhookUrl: process.env.BOT_WEBHOOK_URL ?? '',
-  botUsePolling:
-    process.env.BOT_USE_POLLING === 'true' || !process.env.BOT_WEBHOOK_URL?.startsWith('https://'),
+  botUsePolling: resolveBotUsePolling(),
   timezone: process.env.TZ ?? 'Europe/Belgrade',
 };
 
