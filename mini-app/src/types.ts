@@ -1,6 +1,6 @@
 export type RsvpStatus = 'going' | 'maybe' | 'not_going';
 
-export type ReminderOffset = '1m' | '1d' | '2d' | '3d' | '7d' | '14d' | '30d';
+export type ReminderOffset = '1m' | '1h' | '1d' | '2d' | '3d' | '7d' | '14d' | '30d';
 
 export interface User {
   id: string;

@@ -191,8 +191,6 @@ export function EventDetailPage() {
 
             <DatetimeField value={editStartsAt} onChange={setEditStartsAt} />
 
-            <ReminderFields value={editReminders} onChange={setEditReminders} />
-
             <label className="field">
               <span>Описание</span>
               <textarea
@@ -202,6 +200,8 @@ export function EventDetailPage() {
                 placeholder="Дополнительные детали"
               />
             </label>
+
+            <ReminderFields value={editReminders} onChange={setEditReminders} />
 
             {editError && <div className="error-box">{editError}</div>}
 

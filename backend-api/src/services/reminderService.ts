@@ -5,7 +5,7 @@ import {
   isReminderOffset,
   offsetToMinutes,
   remindAtTime,
-  reminderLeadPhrase,
+  reminderInPhrase,
   type ReminderOffset,
 } from '../utils/reminderOffsets.js';
 import { postEventReminderToGroup } from './telegramBot.js';
@@ -47,7 +47,7 @@ export async function runReminderJob(now = new Date()): Promise<void> {
       if (already) continue;
 
       try {
-        await postEventReminderToGroup(event, reminderLeadPhrase(offset));
+        await postEventReminderToGroup(event, reminderInPhrase(offset));
         await EventReminderSent.create({
           eventId: event._id,
           offset,

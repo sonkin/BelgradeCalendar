@@ -1,7 +1,8 @@
-export type ReminderOffset = '1m' | '1d' | '2d' | '3d' | '7d' | '14d' | '30d';
+export type ReminderOffset = '1m' | '1h' | '1d' | '2d' | '3d' | '7d' | '14d' | '30d';
 
 export const REMINDER_OFFSET_OPTIONS: { value: ReminderOffset; label: string }[] = [
   { value: '1m', label: 'За 1 минуту' },
+  { value: '1h', label: 'За 1 час' },
   { value: '1d', label: 'За сутки' },
   { value: '2d', label: 'За 2 суток' },
   { value: '3d', label: 'За 3 суток' },

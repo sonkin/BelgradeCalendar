@@ -93,8 +93,12 @@ export async function postEventAnnouncement(event: IEvent, _creator: IUser): Pro
   return data.result.message_id;
 }
 
-export function formatEventReminderText(event: IEvent, leadPhrase: string): string {
-  const lines = [`⏰ Напоминание (${leadPhrase}):`, event.title, formatEventWhen(event)];
+export function formatEventReminderText(event: IEvent, inPhrase: string): string {
+  const lines = [
+    `⏰ Напоминание: ${inPhrase} состоится событие:`,
+    event.title,
+    formatEventWhen(event),
+  ];
 
   if (event.location) {
     lines.push(`📍 ${event.location}`);
@@ -103,7 +107,7 @@ export function formatEventReminderText(event: IEvent, leadPhrase: string): stri
   return lines.join('\n');
 }
 
-export async function postEventReminderToGroup(event: IEvent, leadPhrase: string): Promise<void> {
+export async function postEventReminderToGroup(event: IEvent, inPhrase: string): Promise<void> {
   if (!config.telegramChatId) {
     console.warn('TELEGRAM_CHAT_ID not set — skipping group reminder');
     return;
@@ -112,7 +116,7 @@ export async function postEventReminderToGroup(event: IEvent, leadPhrase: string
   const eventId = event._id.toString();
   const payload: Record<string, unknown> = {
     chat_id: config.telegramChatId,
-    text: formatEventReminderText(event, leadPhrase),
+    text: formatEventReminderText(event, inPhrase),
   };
 
   if (config.webappUrl.startsWith('https://')) {

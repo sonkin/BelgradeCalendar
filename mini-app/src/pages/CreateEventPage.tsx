@@ -87,8 +87,6 @@ export function CreateEventPage() {
           />
         </label>
 
-        <ReminderFields value={reminders} onChange={setReminders} />
-
         <label className="field">
           <span>Описание</span>
           <textarea
@@ -98,6 +96,8 @@ export function CreateEventPage() {
             placeholder="Дополнительные детали"
           />
         </label>
+
+        <ReminderFields value={reminders} onChange={setReminders} />
 
         {error && <div className="error-box">{error}</div>}
 

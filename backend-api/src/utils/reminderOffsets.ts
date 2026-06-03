@@ -1,5 +1,6 @@
 export const REMINDER_OFFSETS = [
   '1m',
+  '1h',
   '1d',
   '2d',
   '3d',
@@ -12,6 +13,7 @@ export type ReminderOffset = (typeof REMINDER_OFFSETS)[number];
 
 const OFFSET_MINUTES: Record<ReminderOffset, number> = {
   '1m': 1,
+  '1h': 60,
   '1d': 24 * 60,
   '2d': 2 * 24 * 60,
   '3d': 3 * 24 * 60,
@@ -22,6 +24,7 @@ const OFFSET_MINUTES: Record<ReminderOffset, number> = {
 
 export const REMINDER_OFFSET_LABELS: Record<ReminderOffset, string> = {
   '1m': 'За 1 минуту',
+  '1h': 'За 1 час',
   '1d': 'За сутки',
   '2d': 'За 2 суток',
   '3d': 'За 3 суток',
@@ -42,8 +45,20 @@ export function remindAtTime(startsAt: Date, offset: ReminderOffset): Date {
   return new Date(startsAt.getTime() - offsetToMinutes(offset) * 60_000);
 }
 
-export function reminderLeadPhrase(offset: ReminderOffset): string {
-  return REMINDER_OFFSET_LABELS[offset].toLowerCase();
+/** Фраза для текста в Telegram: «через 1 минуту», «через 1 час», … */
+export const REMINDER_IN_PHRASES: Record<ReminderOffset, string> = {
+  '1m': 'через 1 минуту',
+  '1h': 'через 1 час',
+  '1d': 'через 1 сутки',
+  '2d': 'через 2 суток',
+  '3d': 'через 3 суток',
+  '7d': 'через неделю',
+  '14d': 'через 2 недели',
+  '30d': 'через месяц',
+};
+
+export function reminderInPhrase(offset: ReminderOffset): string {
+  return REMINDER_IN_PHRASES[offset];
 }
 
 export function validateEventReminders(
