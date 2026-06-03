@@ -31,12 +31,8 @@ function writeCache(events: EventListItem[]): void {
   sessionStorage.setItem(CACHE_KEY, JSON.stringify(events));
 }
 
-function getDateRange() {
-  const now = new Date();
-  return {
-    from: now.toISOString(),
-    to: new Date(now.getFullYear(), now.getMonth() + 3, now.getDate()).toISOString(),
-  };
+function listFromDate(): string {
+  return new Date().toISOString();
 }
 
 interface EventsContextValue {
@@ -71,8 +67,7 @@ export function EventsProvider({
   const refresh = useCallback(async () => {
     setError(null);
     try {
-      const { from, to } = getDateRange();
-      const data = await fetchEvents(from, to);
+      const data = await fetchEvents(listFromDate());
       persist(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось загрузить события');
