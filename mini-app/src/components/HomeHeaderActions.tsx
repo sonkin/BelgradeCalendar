@@ -3,7 +3,7 @@ import { saveListScrollPosition } from '../utils/scrollRestoration';
 
 export function HomeHeaderActions() {
   return (
-    <div className="layout__header-actions layout__header-actions--stack">
+    <div className="layout__header-actions">
       <Link
         to="/events/new"
         className="btn btn--primary btn--small btn--create"

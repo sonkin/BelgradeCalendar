@@ -68,7 +68,7 @@ textarea {
 }
 
 .layout__header-row--home {
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
 }
 
@@ -84,18 +84,6 @@ textarea {
   min-width: 0;
   flex-wrap: nowrap;
   justify-content: flex-end;
-}
-
-.layout__header-actions--stack {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-}
-
-.layout__header-actions--stack .btn {
-  width: 100%;
-  justify-content: center;
-  white-space: nowrap;
 }
 
 .layout__header-actions .btn--create {
@@ -116,11 +104,12 @@ textarea {
 
 .app-brand__logo-btn {
   display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 50%;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -130,10 +119,9 @@ textarea {
 
 .app-brand__logo {
   display: block;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
+  width: 52px;
+  height: auto;
+  object-fit: contain;
 }
 
 .app-brand__popover {

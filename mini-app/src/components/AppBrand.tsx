@@ -32,7 +32,7 @@ export function AppBrand() {
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <img src={logoUrl} alt="" className="app-brand__logo" width={48} height={48} />
+        <img src={logoUrl} alt="" className="app-brand__logo" width={52} height={55} />
       </button>
       {open ? (
         <div className="app-brand__popover" role="dialog" aria-label="Автор">
