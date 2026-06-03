@@ -129,7 +129,7 @@ textarea {
   left: 0;
   top: calc(100% + 8px);
   z-index: 40;
-  min-width: 180px;
+  width: min(320px, calc(100vw - 32px));
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid var(--app-border);
@@ -137,23 +137,50 @@ textarea {
   box-shadow: 0 12px 40px color-mix(in srgb, var(--app-text) 18%, transparent);
 }
 
+.app-brand__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  align-items: baseline;
+  margin-bottom: 10px;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.app-brand__row:last-of-type {
+  margin-bottom: 12px;
+}
+
+.app-brand__label {
+  font-weight: 700;
+  color: var(--app-text);
+  flex: 0 0 auto;
+}
+
+.app-brand__value {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .app-brand__link {
-  display: block;
-  width: 100%;
+  display: inline;
   padding: 0;
   border: none;
   background: none;
   color: var(--app-link);
   font: inherit;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: inherit;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
-.app-brand__year {
-  margin: 6px 0 0;
-  font-size: 15px;
+.app-brand__hint {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .layout__back {

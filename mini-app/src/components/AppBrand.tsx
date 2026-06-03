@@ -1,7 +1,38 @@
 import WebApp from '@twa-dev/sdk';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  APP_CONTACT_HINT,
+  APP_DEVELOPER_NAME,
+  APP_DEVELOPER_TELEGRAM_URL,
+  APP_GITHUB_URL,
+  APP_IDEA_AUTHOR_NAME,
+  APP_IDEA_AUTHOR_TELEGRAM_URL,
+} from '../constants/appMeta';
 import logoUrl from '../styles/logo.png';
-import { APP_AUTHOR_NAME, APP_AUTHOR_TELEGRAM_URL, APP_YEAR } from '../constants/appMeta';
+
+function openTelegram(url: string, onDone: () => void) {
+  WebApp.openTelegramLink(url);
+  onDone();
+}
+
+function openExternal(url: string, onDone: () => void) {
+  WebApp.openLink(url);
+  onDone();
+}
+
+type InfoRowProps = {
+  label: string;
+  children: ReactNode;
+};
+
+function InfoRow({ label, children }: InfoRowProps) {
+  return (
+    <div className="app-brand__row">
+      <span className="app-brand__label">{label}</span>
+      <span className="app-brand__value">{children}</span>
+    </div>
+  );
+}
 
 export function AppBrand() {
   const [open, setOpen] = useState(false);
@@ -18,10 +49,7 @@ export function AppBrand() {
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
 
-  const openAuthor = () => {
-    WebApp.openTelegramLink(APP_AUTHOR_TELEGRAM_URL);
-    setOpen(false);
-  };
+  const close = () => setOpen(false);
 
   return (
     <div ref={rootRef} className="app-brand">
@@ -35,11 +63,38 @@ export function AppBrand() {
         <img src={logoUrl} alt="" className="app-brand__logo" width={52} height={55} />
       </button>
       {open ? (
-        <div className="app-brand__popover" role="dialog" aria-label="Автор">
-          <button type="button" className="app-brand__link" onClick={openAuthor}>
-            {APP_AUTHOR_NAME}
-          </button>
-          <p className="app-brand__year muted">{APP_YEAR}</p>
+        <div className="app-brand__popover" role="dialog" aria-label="О календаре">
+          <InfoRow label="Идея Календаря:">
+            <button
+              type="button"
+              className="app-brand__link"
+              onClick={() => openTelegram(APP_IDEA_AUTHOR_TELEGRAM_URL, close)}
+            >
+              {APP_IDEA_AUTHOR_NAME}
+            </button>
+          </InfoRow>
+
+          <InfoRow label="Разработал:">
+            <button
+              type="button"
+              className="app-brand__link"
+              onClick={() => openTelegram(APP_DEVELOPER_TELEGRAM_URL, close)}
+            >
+              {APP_DEVELOPER_NAME}
+            </button>
+          </InfoRow>
+
+          <InfoRow label="GitHub репозиторий:">
+            <button
+              type="button"
+              className="app-brand__link"
+              onClick={() => openExternal(APP_GITHUB_URL, close)}
+            >
+              github.com/sonkin/BelgradeCalendar
+            </button>
+          </InfoRow>
+
+          <p className="app-brand__hint muted">{APP_CONTACT_HINT}</p>
         </div>
       ) : null}
     </div>
