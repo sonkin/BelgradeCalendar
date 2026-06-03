@@ -83,9 +83,17 @@ export async function startTelegramBot(app: Express): Promise<void> {
 
   const info = await bot.api.getWebhookInfo();
   console.log('Telegram bot: webhook →', config.botWebhookUrl);
+  console.log('Express route: POST /bot/webhook (nginx: /api/ → :3000/)');
   if (info.last_error_message) {
     console.warn('Webhook last error:', info.last_error_message);
   }
+
+  app.get('/bot/webhook', (_req, res) => {
+    res.json({
+      ok: true,
+      hint: 'Telegram sends POST here. Public URL should be https://<domain>/api/bot/webhook',
+    });
+  });
 
   app.use('/bot/webhook', (req, res, next) => {
     if (req.method === 'POST') {

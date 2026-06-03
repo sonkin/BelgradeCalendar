@@ -121,7 +121,7 @@ belgrade-calendar/
 |--------|-----|
 | Mini App | `https://belca.jtutor.app` |
 | API | `https://belca.jtutor.app/api` |
-| Bot webhook | `https://belca.jtutor.app/bot/webhook` |
+| Bot webhook | `https://belca.jtutor.app/api/bot/webhook` |
 
 ### Timezone
 
@@ -157,7 +157,7 @@ TELEGRAM_ADMIN_IDS=123456789,987654321
 # URLs
 WEBAPP_URL=https://belca.jtutor.app
 API_PUBLIC_URL=https://belca.jtutor.app/api
-BOT_WEBHOOK_URL=https://belca.jtutor.app/bot/webhook
+BOT_WEBHOOK_URL=https://belca.jtutor.app/api/bot/webhook
 
 # App
 TZ=Europe/Belgrade
@@ -318,9 +318,7 @@ server {
         proxy_pass http://127.0.0.1:3000/;
     }
 
-    location /bot/webhook {
-        proxy_pass http://127.0.0.1:3000/bot/webhook;
-    }
+    # Webhook бота: https://belca.jtutor.app/api/bot/webhook → :3000/bot/webhook
 }
 ```
 

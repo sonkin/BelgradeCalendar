@@ -86,7 +86,7 @@ cd mini-app && npm install && npm run dev       # :5173
 | `TELEGRAM_ADMIN_IDS` | Telegram ID админов через запятую |
 | `WEBAPP_URL` | HTTPS URL Mini App |
 | `API_PUBLIC_URL` | Публичный base API (для iCal), на prod: `https://<домен>/api` |
-| `BOT_WEBHOOK_URL` | Webhook на prod: `https://<домен>/bot/webhook` |
+| `BOT_WEBHOOK_URL` | Webhook на prod: `https://<домен>/api/bot/webhook` (через nginx `/api/`) |
 | `BOT_USE_POLLING` | `true` локально (по умолчанию), `false` на prod |
 
 Полный пример — [`.env.example`](.env.example).
@@ -98,17 +98,16 @@ cd mini-app && npm install && npm run dev       # :5173
 1. VPS: Node 20+, nginx, certbot, MongoDB (Docker или Atlas).
 2. Сборка: `backend-api`, `mini-app` → статика в `/var/www/...`.
 3. **Один процесс:** `backend-api` на `:3000` (pm2/systemd).
-4. Nginx: `/` → Mini App, `/api/` → API, `/bot/webhook` → тот же `:3000`.
-5. `BOT_USE_POLLING=false`, SSL, Menu Button в BotFather, `/setup` в группе.
+4. Nginx: `/` → Mini App, `/api/` → API (включая webhook бота).
+5. `BOT_USE_POLLING=false`, `BOT_WEBHOOK_URL=https://belca.jtutor.app/api/bot/webhook`, Menu Button, `/setup`.
 
 ```nginx
 location /api/ {
     proxy_pass http://127.0.0.1:3000/;
 }
-location /bot/webhook {
-    proxy_pass http://127.0.0.1:3000/bot/webhook;
-}
 ```
+
+Проверка webhook: `curl https://belca.jtutor.app/api/bot/webhook` → `{"ok":true,...}`
 
 Детали: [`backend-api/README.md`](backend-api/README.md), архитектура: [`docs/decisions.md`](docs/decisions.md).
 

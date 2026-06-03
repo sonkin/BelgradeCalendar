@@ -69,7 +69,7 @@ npm start
 | `JWT_EXPIRES_IN` | нет | Срок JWT, по умолчанию `30d` |
 | `PORT` | нет | Порт API, по умолчанию `3000` |
 | `TZ` | нет | Таймзона, по умолчанию `Europe/Belgrade` |
-| `BOT_WEBHOOK_URL` | prod | `https://<домен>/bot/webhook` |
+| `BOT_WEBHOOK_URL` | prod | `https://<домен>/api/bot/webhook` |
 | `BOT_USE_POLLING` | нет | `true` — polling (dev); `false` + webhook на prod |
 
 \*Пустой список допустим технически, но тогда не будет пользователей с ролью `admin`.
@@ -220,7 +220,7 @@ curl -s -X PUT "$API/events/<eventId>/rsvp" \
 | Режим | Когда | Как |
 |-------|-------|-----|
 | **Polling** | Локально (по умолчанию) | `BOT_USE_POLLING=true` или webhook URL без https |
-| **Webhook** | Production | `BOT_USE_POLLING=false`, `BOT_WEBHOOK_URL=https://<домен>/bot/webhook` |
+| **Webhook** | Production | `BOT_USE_POLLING=false`, `BOT_WEBHOOK_URL=https://<домен>/api/bot/webhook` |
 
 | Команда | Описание |
 |---------|----------|
@@ -252,7 +252,7 @@ src/
 
 - Mini App — статика nginx (`/`)
 - API — `location /api/` → `127.0.0.1:3000/`
-- Webhook — `location /bot/webhook` → `127.0.0.1:3000/bot/webhook`
+- Webhook — `https://<домен>/api/bot/webhook` (тот же `location /api/` → `:3000/bot/webhook`)
 - iCal — `{API_PUBLIC_URL}/calendar/{token}/all.ics`
 
 ```nginx
@@ -261,13 +261,11 @@ location /api/ {
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
 }
-
-location /bot/webhook {
-    proxy_pass http://127.0.0.1:3000/bot/webhook;
-}
 ```
 
-`API_PUBLIC_URL=https://<домен>/api`, `BOT_USE_POLLING=false`.
+`API_PUBLIC_URL=https://<домен>/api`, `BOT_WEBHOOK_URL=https://<домен>/api/bot/webhook`, `BOT_USE_POLLING=false`.
+
+Проверка webhook: `curl https://<домен>/api/bot/webhook`
 
 ## Скрипты
 
