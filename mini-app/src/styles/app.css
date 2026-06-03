@@ -245,6 +245,10 @@ textarea {
   font-weight: 600;
 }
 
+.rsvp-status--error {
+  color: #dc2626;
+}
+
 .rsvp-status__check {
   display: inline-flex;
   align-items: center;

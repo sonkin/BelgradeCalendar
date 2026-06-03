@@ -20,9 +20,9 @@ export function EventListPage() {
   useListScrollRestoration(contentReady, location.key);
 
   const handleRsvpChange = useCallback(
-    (eventId: string, status: RsvpStatus) => {
+    (eventId: string, status: RsvpStatus, previousStatus: RsvpStatus | null) => {
       if (!user) return;
-      void saveRsvp(eventId, status, user);
+      void saveRsvp(eventId, status, user, previousStatus);
     },
     [saveRsvp, user],
   );

@@ -11,7 +11,7 @@ interface RsvpSectionProps {
 
 export function RsvpSection({ eventId, value, onChange, disabled }: RsvpSectionProps) {
   const { getRsvpSaveState } = useEvents();
-  const { phase } = getRsvpSaveState(eventId);
+  const { phase, message } = getRsvpSaveState(eventId);
   const saving = phase === 'saving';
 
   return (
@@ -21,17 +21,18 @@ export function RsvpSection({ eventId, value, onChange, disabled }: RsvpSectionP
         onChange={onChange}
         disabled={disabled || saving}
       />
-      {phase === 'saving' && (
-        <p className="rsvp-status rsvp-status--saving" role="status" aria-live="polite">
-          Статус сохраняется в базе данных…
-        </p>
-      )}
-      {phase === 'saved' && (
-        <p className="rsvp-status rsvp-status--saved" role="status" aria-live="polite">
-          <span className="rsvp-status__check" aria-hidden="true">
-            ✓
-          </span>
-          Статус сохранён
+      {phase !== 'idle' && message && (
+        <p
+          className={`rsvp-status rsvp-status--${phase}`}
+          role="status"
+          aria-live="polite"
+        >
+          {phase === 'saved' && (
+            <span className="rsvp-status__check" aria-hidden="true">
+              ✓
+            </span>
+          )}
+          {message}
         </p>
       )}
     </div>

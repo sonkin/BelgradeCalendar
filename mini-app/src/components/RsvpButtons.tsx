@@ -23,7 +23,11 @@ export function RsvpButtons({ value, onChange, disabled }: RsvpButtonsProps) {
           type="button"
           className={`rsvp-btn ${value === status ? 'rsvp-btn--active' : ''}`}
           disabled={disabled}
-          onClick={() => onChange(status)}
+          onClick={() => {
+            if (value !== status) {
+              onChange(status);
+            }
+          }}
         >
           {LABELS[status]}
         </button>

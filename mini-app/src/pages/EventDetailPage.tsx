@@ -11,6 +11,7 @@ import { useEvents } from '../context/EventsContext';
 import type { EventDetail, RsvpStatus } from '../types';
 import { belgradePartsToPayload, formatDuration, isoToBelgradeParts } from '../utils/dates';
 import { listItemToDetail } from '../utils/eventMappers';
+import { applyDetailRsvp, userAsParticipant } from '../utils/rsvp';
 
 export function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -130,7 +131,11 @@ export function EventDetailPage() {
   const handleRsvp = async (status: RsvpStatus) => {
     if (!id || !event || !user || event.myRsvp === status) return;
 
-    const updated = await saveRsvp(id, status, user);
+    setEvent((current) =>
+      current ? applyDetailRsvp(current, userAsParticipant(user), status) : current,
+    );
+
+    const updated = await saveRsvp(id, status, user, event.myRsvp);
     if (updated) {
       setEvent(updated);
     }

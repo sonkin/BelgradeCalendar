@@ -7,7 +7,7 @@ import { RsvpSection } from './RsvpSection';
 
 interface EventCardProps {
   event: EventListItem;
-  onRsvpChange: (eventId: string, status: RsvpStatus) => void;
+  onRsvpChange: (eventId: string, status: RsvpStatus, previousStatus: RsvpStatus | null) => void;
 }
 
 export function EventCard({ event, onRsvpChange }: EventCardProps) {
@@ -44,7 +44,7 @@ export function EventCard({ event, onRsvpChange }: EventCardProps) {
       <RsvpSection
         eventId={event.id}
         value={event.myRsvp}
-        onChange={(status) => onRsvpChange(event.id, status)}
+        onChange={(status) => onRsvpChange(event.id, status, event.myRsvp)}
       />
     </article>
   );

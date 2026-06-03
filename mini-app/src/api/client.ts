@@ -117,6 +117,9 @@ export async function updateRsvp(eventId: string, status: RsvpStatus): Promise<E
     method: 'PUT',
     body: JSON.stringify({ status }),
   });
+  if (!data?.event) {
+    throw new Error('Сервер не вернул обновлённое событие');
+  }
   return data.event;
 }
 

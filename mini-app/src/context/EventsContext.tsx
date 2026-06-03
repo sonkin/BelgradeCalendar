@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { fetchEvents, updateRsvp } from '../api/client';
+import { ApiError, fetchEvents, updateRsvp } from '../api/client';
 import type { EventDetail, EventListItem, RsvpStatus, User } from '../types';
 import { detailToListItem, isUpcomingEvent } from '../utils/eventMappers';
 import { sortEventsByStart } from '../utils/dates';
@@ -19,10 +19,11 @@ function isEventDetail(event: EventListItem | EventDetail): event is EventDetail
   return 'notGoing' in event.participants;
 }
 
-export type RsvpSavePhase = 'idle' | 'saving' | 'saved';
+export type RsvpSavePhase = 'idle' | 'saving' | 'saved' | 'error';
 
 export interface RsvpSaveState {
   phase: RsvpSavePhase;
+  message?: string;
 }
 
 const CACHE_KEY = 'belca_events_cache';
@@ -55,7 +56,12 @@ interface EventsContextValue {
   upsertEvent: (event: EventListItem | EventDetail) => void;
   removeEvent: (id: string) => void;
   replaceEvents: (updater: (events: EventListItem[]) => EventListItem[]) => void;
-  saveRsvp: (eventId: string, status: RsvpStatus, user: User) => Promise<EventDetail | null>;
+  saveRsvp: (
+    eventId: string,
+    status: RsvpStatus,
+    user: User,
+    previousStatus: RsvpStatus | null,
+  ) => Promise<EventDetail | null>;
   getRsvpSaveState: (eventId: string) => RsvpSaveState;
   waitForEventRsvp: (eventId: string) => Promise<void>;
   mergeFetchedEventDetail: (fetched: EventDetail, user: User) => EventDetail;
@@ -74,7 +80,7 @@ export function EventsProvider({
   const [events, setEvents] = useState<EventListItem[]>(() => readCache());
   const [initialLoading, setInitialLoading] = useState(() => readCache().length === 0);
   const [error, setError] = useState<string | null>(null);
-  const [rsvpPhases, setRsvpPhases] = useState<Record<string, RsvpSavePhase>>({});
+  const [rsvpStates, setRsvpStates] = useState<Record<string, RsvpSaveState>>({});
 
   const inFlightRsvpRef = useRef<Map<string, Promise<EventDetail>>>(new Map());
   const savedDetailRef = useRef<Map<string, EventDetail>>(new Map());
@@ -86,8 +92,8 @@ export function EventsProvider({
     refreshSeqRef.current += 1;
   }, []);
 
-  const setRsvpPhase = useCallback((eventId: string, phase: RsvpSavePhase) => {
-    setRsvpPhases((prev) => ({ ...prev, [eventId]: phase }));
+  const setRsvpState = useCallback((eventId: string, state: RsvpSaveState) => {
+    setRsvpStates((prev) => ({ ...prev, [eventId]: state }));
   }, []);
 
   const clearSavedMessageTimer = useCallback((eventId: string) => {
@@ -102,12 +108,12 @@ export function EventsProvider({
     (eventId: string) => {
       clearSavedMessageTimer(eventId);
       const timerId = window.setTimeout(() => {
-        setRsvpPhase(eventId, 'idle');
+        setRsvpState(eventId, { phase: 'idle' });
         savedMessageTimersRef.current.delete(eventId);
       }, RSVP_SAVED_MESSAGE_MS);
       savedMessageTimersRef.current.set(eventId, timerId);
     },
-    [clearSavedMessageTimer, setRsvpPhase],
+    [clearSavedMessageTimer, setRsvpState],
   );
 
   const persist = useCallback((next: EventListItem[]) => {
@@ -214,7 +220,7 @@ export function EventsProvider({
   const mergeFetchedEventDetail = useCallback(
     (fetched: EventDetail, user: User): EventDetail => {
       const inFlight = inFlightRsvpRef.current.has(fetched.id);
-      const phase = rsvpPhases[fetched.id];
+      const phase = rsvpStates[fetched.id]?.phase;
       if (!inFlight && phase !== 'saving' && phase !== 'saved') {
         return fetched;
       }
@@ -226,49 +232,47 @@ export function EventsProvider({
 
       return applyDetailRsvp(fetched, userAsParticipant(user), local.myRsvp);
     },
-    [events, rsvpPhases],
+    [events, rsvpStates],
   );
 
   const saveRsvp = useCallback(
-    async (eventId: string, status: RsvpStatus, user: User): Promise<EventDetail | null> => {
+    async (
+      eventId: string,
+      status: RsvpStatus,
+      user: User,
+      previousStatus: RsvpStatus | null,
+    ): Promise<EventDetail | null> => {
+      if (previousStatus === status) {
+        return null;
+      }
+
       let snapshot: EventListItem | null = null;
-      let shouldSave = false;
 
       replaceEvents((prev) => {
         const current = prev.find((event) => event.id === eventId);
-        if (current?.myRsvp === status) {
+        if (!current) {
           return prev;
         }
 
-        shouldSave = true;
+        snapshot = {
+          ...current,
+          participants: {
+            going: [...current.participants.going],
+            maybe: [...current.participants.maybe],
+          },
+        };
 
-        if (current) {
-          snapshot = {
-            ...current,
-            participants: {
-              going: [...current.participants.going],
-              maybe: [...current.participants.maybe],
-            },
-          };
-
-          return prev.map((event) =>
-            event.id === eventId ? applyListRsvp(current, userAsParticipant(user), status) : event,
-          );
-        }
-
-        return prev;
+        return prev.map((event) =>
+          event.id === eventId ? applyListRsvp(current, userAsParticipant(user), status) : event,
+        );
       });
-
-      if (!shouldSave) {
-        return null;
-      }
 
       const seq = (rsvpSeqRef.current.get(eventId) ?? 0) + 1;
       rsvpSeqRef.current.set(eventId, seq);
 
       invalidateRefresh();
       clearSavedMessageTimer(eventId);
-      setRsvpPhase(eventId, 'saving');
+      setRsvpState(eventId, { phase: 'saving', message: 'Записывается в БД…' });
 
       const promise = updateRsvp(eventId, status);
       inFlightRsvpRef.current.set(eventId, promise);
@@ -280,15 +284,28 @@ export function EventsProvider({
           return null;
         }
 
+        if (detail.myRsvp !== status) {
+          throw new Error(
+            `Сервер вернул статус «${detail.myRsvp ?? 'нет'}», ожидался «${status}»`,
+          );
+        }
+
         savedDetailRef.current.set(eventId, detail);
         upsertEvent(detail);
-        setRsvpPhase(eventId, 'saved');
+        setRsvpState(eventId, { phase: 'saved', message: 'Сохранено в БД' });
         scheduleSavedMessageReset(eventId);
         return detail;
-      } catch {
+      } catch (err) {
         if (rsvpSeqRef.current.get(eventId) !== seq) {
           return null;
         }
+
+        const message =
+          err instanceof ApiError
+            ? `Ошибка ${err.status}: ${err.message}`
+            : err instanceof Error
+              ? err.message
+              : 'Не удалось сохранить ответ';
 
         if (snapshot) {
           const rollback = snapshot;
@@ -296,8 +313,8 @@ export function EventsProvider({
         } else {
           void refresh();
         }
-        setRsvpPhase(eventId, 'idle');
-        WebApp.showAlert('Не удалось сохранить ответ');
+        setRsvpState(eventId, { phase: 'error', message });
+        WebApp.showAlert(message);
         return null;
       } finally {
         if (inFlightRsvpRef.current.get(eventId) === promise) {
@@ -311,16 +328,14 @@ export function EventsProvider({
       refresh,
       replaceEvents,
       scheduleSavedMessageReset,
-      setRsvpPhase,
+      setRsvpState,
       upsertEvent,
     ],
   );
 
   const getRsvpSaveState = useCallback(
-    (eventId: string): RsvpSaveState => ({
-      phase: rsvpPhases[eventId] ?? 'idle',
-    }),
-    [rsvpPhases],
+    (eventId: string): RsvpSaveState => rsvpStates[eventId] ?? { phase: 'idle' },
+    [rsvpStates],
   );
 
   const value = useMemo(
