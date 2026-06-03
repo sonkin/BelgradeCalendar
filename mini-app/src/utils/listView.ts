@@ -1,12 +1,24 @@
 export type ListViewMode = 'full' | 'compact' | 'monthly';
 
-const VIEW_MODE_KEY = 'belca_list_view_mode';
-const MONTH_KEY = 'belca_list_month_key';
+function viewModeKey(userId: string): string {
+  return `belca_list_view_mode:${userId}`;
+}
 
-export function readListViewMode(): ListViewMode {
+function monthKey(userId: string): string {
+  return `belca_list_month_key:${userId}`;
+}
+
+function isListViewMode(raw: string | null): raw is ListViewMode {
+  return raw === 'full' || raw === 'compact' || raw === 'monthly';
+}
+
+export function readListViewMode(userId: string | null): ListViewMode {
+  if (!userId) {
+    return 'full';
+  }
   try {
-    const raw = sessionStorage.getItem(VIEW_MODE_KEY);
-    if (raw === 'full' || raw === 'compact' || raw === 'monthly') {
+    const raw = localStorage.getItem(viewModeKey(userId));
+    if (isListViewMode(raw)) {
       return raw;
     }
   } catch {
@@ -15,13 +27,20 @@ export function readListViewMode(): ListViewMode {
   return 'full';
 }
 
-export function writeListViewMode(mode: ListViewMode): void {
-  sessionStorage.setItem(VIEW_MODE_KEY, mode);
+export function writeListViewMode(userId: string, mode: ListViewMode): void {
+  try {
+    localStorage.setItem(viewModeKey(userId), mode);
+  } catch {
+    /* ignore */
+  }
 }
 
-export function readSelectedMonthKey(fallback: string): string {
+export function readSelectedMonthKey(userId: string | null, fallback: string): string {
+  if (!userId) {
+    return fallback;
+  }
   try {
-    const raw = sessionStorage.getItem(MONTH_KEY);
+    const raw = localStorage.getItem(monthKey(userId));
     if (raw) {
       return raw;
     }
@@ -31,6 +50,10 @@ export function readSelectedMonthKey(fallback: string): string {
   return fallback;
 }
 
-export function writeSelectedMonthKey(monthKey: string): void {
-  sessionStorage.setItem(MONTH_KEY, monthKey);
+export function writeSelectedMonthKey(userId: string, monthKeyValue: string): void {
+  try {
+    localStorage.setItem(monthKey(userId), monthKeyValue);
+  } catch {
+    /* ignore */
+  }
 }

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { EventListByDay } from '../components/EventListByDay';
 import { Layout } from '../components/Layout';
@@ -30,10 +30,14 @@ export function EventListPage() {
   const monthKeys = useMemo(() => listSelectableMonthKeys(), []);
   const defaultMonthKey = useMemo(() => currentBelgradeMonthKey(), []);
 
-  const [viewMode, setViewMode] = useState<ListViewMode>(() => readListViewMode());
-  const [selectedMonthKey, setSelectedMonthKey] = useState(() =>
-    readSelectedMonthKey(defaultMonthKey),
-  );
+  const [viewMode, setViewMode] = useState<ListViewMode>('full');
+  const [selectedMonthKey, setSelectedMonthKey] = useState(defaultMonthKey);
+
+  useEffect(() => {
+    if (!user) return;
+    setViewMode(readListViewMode(user.id));
+    setSelectedMonthKey(readSelectedMonthKey(user.id, defaultMonthKey));
+  }, [user, defaultMonthKey]);
 
   const monthIndex = monthKeys.indexOf(selectedMonthKey);
   const safeMonthIndex = monthIndex >= 0 ? monthIndex : 0;
@@ -50,20 +54,32 @@ export function EventListPage() {
 
   useListScrollRestoration(contentReady, location.key);
 
-  const handleViewModeChange = useCallback((mode: ListViewMode) => {
-    setViewMode(mode);
-    writeListViewMode(mode);
-    if (mode === 'monthly' && monthKeys.indexOf(selectedMonthKey) < 0) {
-      const current = defaultMonthKey;
-      setSelectedMonthKey(current);
-      writeSelectedMonthKey(current);
-    }
-  }, [defaultMonthKey, monthKeys, selectedMonthKey]);
+  const handleViewModeChange = useCallback(
+    (mode: ListViewMode) => {
+      setViewMode(mode);
+      if (user) {
+        writeListViewMode(user.id, mode);
+      }
+      if (mode === 'monthly' && monthKeys.indexOf(selectedMonthKey) < 0) {
+        const current = defaultMonthKey;
+        setSelectedMonthKey(current);
+        if (user) {
+          writeSelectedMonthKey(user.id, current);
+        }
+      }
+    },
+    [defaultMonthKey, monthKeys, selectedMonthKey, user],
+  );
 
-  const handleMonthKeyChange = useCallback((monthKey: string) => {
-    setSelectedMonthKey(monthKey);
-    writeSelectedMonthKey(monthKey);
-  }, []);
+  const handleMonthKeyChange = useCallback(
+    (monthKeyValue: string) => {
+      setSelectedMonthKey(monthKeyValue);
+      if (user) {
+        writeSelectedMonthKey(user.id, monthKeyValue);
+      }
+    },
+    [user],
+  );
 
   const handleMonthPrev = useCallback(() => {
     if (safeMonthIndex <= 0) return;
