@@ -71,8 +71,14 @@ eventsRouter.delete('/:id', async (req, res, next) => {
 eventsRouter.put('/:id/rsvp', async (req, res, next) => {
   try {
     const body = req.body as RsvpBody;
+    if (body?.clear) {
+      const event = await clearRsvp(req.params.id, req.user!);
+      res.json({ event });
+      return;
+    }
+
     if (!body?.status) {
-      throw new AppError(400, 'Поле status обязательно');
+      throw new AppError(400, 'Укажите status или clear: true');
     }
 
     const event = await upsertRsvp(req.params.id, body.status, req.user!);

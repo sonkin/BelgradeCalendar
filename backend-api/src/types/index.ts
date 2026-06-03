@@ -91,7 +91,9 @@ export interface UpdateEventBody {
 }
 
 export interface RsvpBody {
-  status: RsvpStatus;
+  status?: RsvpStatus;
+  /** Снять свой RSVP (без DELETE — совместимость с nginx) */
+  clear?: boolean;
 }
 
 export type CalendarFeedFilter = 'all' | 'going';

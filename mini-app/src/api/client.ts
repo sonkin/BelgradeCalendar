@@ -47,11 +47,23 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers,
   });
 
-  if (response.status === 204) {
+  const raw = await response.text();
+
+  if (response.status === 204 || raw.length === 0) {
     return undefined as T;
   }
 
-  const data = (await response.json()) as T & { error?: string };
+  let data: T & { error?: string };
+  try {
+    data = JSON.parse(raw) as T & { error?: string };
+  } catch {
+    throw new ApiError(
+      response.status,
+      response.ok
+        ? 'Некорректный ответ сервера'
+        : 'Сервер вернул не JSON (проверьте, что API обновлён)',
+    );
+  }
 
   if (!response.ok) {
     throw new ApiError(response.status, data.error ?? 'Ошибка запроса');
@@ -125,7 +137,8 @@ export async function updateRsvp(eventId: string, status: RsvpStatus): Promise<E
 
 export async function clearRsvp(eventId: string): Promise<EventDetail> {
   const data = await request<{ event: EventDetail }>(`/events/${eventId}/rsvp`, {
-    method: 'DELETE',
+    method: 'PUT',
+    body: JSON.stringify({ clear: true }),
   });
   if (!data?.event) {
     throw new Error('Сервер не вернул обновлённое событие');
