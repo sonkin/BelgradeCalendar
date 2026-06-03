@@ -319,6 +319,22 @@ export function defaultBelgradeDatetimeParts(): BelgradeDatetimeParts {
   return { date: p.date, time: '' };
 }
 
+/** Значение для `<input type="date">` (yyyy-mm-dd) */
+export function belgradeDateToNativeInputValue(date: string): string {
+  const match = BELGRADE_DATE_RE.exec(date.trim());
+  if (!match) return '';
+  const [, day, month, year] = match;
+  return `${year}-${month}-${day}`;
+}
+
+/** Из `<input type="date">` в дд.мм.гггг */
+export function nativeInputValueToBelgradeDate(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return '';
+  const [, year, month, day] = match;
+  return `${day}.${month}.${year}`;
+}
+
 export function formatDuration(minutes: number | null): string | null {
   if (!minutes) return null;
   const hours = Math.floor(minutes / 60);
