@@ -177,7 +177,7 @@ export function TimePickerField({ label = 'Время', value, onChange }: TimeP
         placeholder="18:30"
         maxLength={5}
         value={value}
-        onChange={(e) => onChange(formatBelgradeTimeWhileTyping(e.target.value))}
+        onChange={(e) => onChange(formatBelgradeTimeWhileTyping(e.target.value, value))}
         onBlur={(e) => onChange(normalizeBelgradeTimeInput(e.target.value))}
       />
     </PickerFieldShell>

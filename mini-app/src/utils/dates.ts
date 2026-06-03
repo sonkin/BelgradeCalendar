@@ -350,11 +350,23 @@ export function parseBelgradeTimeParts(value: string): { hour: number; minute: n
 }
 
 /**
- * Маска при вводе с цифровой клавиатуры: «1830» → «18:30», двоеточие не нужно набирать.
+ * Маска при вводе с цифровой клавиатуры: «19» → «19:», «195» → «19:5», двоеточие не набирают.
  */
-export function formatBelgradeTimeWhileTyping(raw: string): string {
+export function formatBelgradeTimeWhileTyping(raw: string, previous = ''): string {
   const digits = raw.replace(/\D/g, '').slice(0, 4);
-  if (digits.length <= 2) return digits;
+  if (digits.length === 0) return '';
+  if (digits.length === 1) return digits;
+
+  const prevDigits = previous.replace(/\D/g, '');
+
+  if (digits.length === 2) {
+    const deleting =
+      digits.length < prevDigits.length || raw.replace(/\D/g, '').length < prevDigits.length;
+    // После «19:» пользователь стирает «:» — оставляем «19», чтобы можно было стереть час
+    if (deleting && !raw.includes(':')) return digits;
+    return `${digits}:`;
+  }
+
   return `${digits.slice(0, 2)}:${digits.slice(2)}`;
 }
 
@@ -362,6 +374,14 @@ export function formatBelgradeTimeWhileTyping(raw: string): string {
 export function normalizeBelgradeTimeInput(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return '';
+
+  const trailingColon = /^(\d{1,2}):$/.exec(trimmed);
+  if (trailingColon) {
+    const hour = Number(trailingColon[1]);
+    if (hour > 23) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(hour)}:00`;
+  }
 
   const match = /^(\d{1,2})(?::(\d{1,2}))?$/.exec(trimmed);
   if (!match) return '';
