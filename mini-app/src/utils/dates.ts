@@ -350,7 +350,8 @@ export function parseBelgradeTimeParts(value: string): { hour: number; minute: n
 }
 
 /**
- * Маска при вводе с цифровой клавиатуры: «19» → «19:», «195» → «19:5», двоеточие не набирают.
+ * Маска при вводе с цифровой клавиатуры: «19» → «19:», «195» → «19:5».
+ * Backspace с «19:» сразу убирает вторую цифру часа вместе с «:» → «1».
  */
 export function formatBelgradeTimeWhileTyping(raw: string, previous = ''): string {
   const digits = raw.replace(/\D/g, '').slice(0, 4);
@@ -358,13 +359,25 @@ export function formatBelgradeTimeWhileTyping(raw: string, previous = ''): strin
   if (digits.length === 1) return digits;
 
   const prevDigits = previous.replace(/\D/g, '');
+  const prevHourWithColon = /^\d{2}:$/.test(previous);
 
   if (digits.length === 2) {
-    const deleting =
-      digits.length < prevDigits.length || raw.replace(/\D/g, '').length < prevDigits.length;
-    // После «19:» пользователь стирает «:» — оставляем «19», чтобы можно было стереть час
-    if (deleting && !raw.includes(':')) return digits;
-    return `${digits}:`;
+    // С «19:» один Backspace — не «19», а сразу «1»
+    if (prevHourWithColon && digits === prevDigits && !raw.includes(':')) {
+      return digits.slice(0, 1);
+    }
+
+    const addingDigits = digits.length > prevDigits.length;
+    if (addingDigits || prevDigits.length < 2) {
+      return `${digits}:`;
+    }
+
+    // «19:5» → «19:»
+    if (raw.includes(':') || previous.includes(':')) {
+      return `${digits}:`;
+    }
+
+    return digits;
   }
 
   return `${digits.slice(0, 2)}:${digits.slice(2)}`;
