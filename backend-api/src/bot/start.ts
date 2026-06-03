@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import type { Bot } from 'grammy';
 import { webhookCallback } from 'grammy';
 import { config } from '../config.js';
-import { createInteractiveBot, setupMenuButton } from './interactiveBot.js';
+import { createInteractiveBot, registerBotCommands, setupMenuButton } from './interactiveBot.js';
 
 let activeBot: Bot | null = null;
 
@@ -44,6 +44,7 @@ export async function startTelegramBot(app: Express): Promise<void> {
   const bot = createInteractiveBot();
   activeBot = bot;
 
+  await registerBotCommands(bot);
   await setupMenuButton(bot);
   console.log('Menu button configured →', config.webappUrl);
 
@@ -75,7 +76,26 @@ export async function startTelegramBot(app: Express): Promise<void> {
     return;
   }
 
-  await bot.api.setWebhook(config.botWebhookUrl);
+  await bot.api.setWebhook(config.botWebhookUrl, {
+    allowed_updates: ['message', 'callback_query'],
+    drop_pending_updates: false,
+  });
+
+  const info = await bot.api.getWebhookInfo();
   console.log('Telegram bot: webhook →', config.botWebhookUrl);
+  if (info.last_error_message) {
+    console.warn('Webhook last error:', info.last_error_message);
+  }
+
+  app.use('/bot/webhook', (req, res, next) => {
+    if (req.method === 'POST') {
+      const updateId =
+        typeof req.body === 'object' && req.body && 'update_id' in req.body
+          ? String((req.body as { update_id: number }).update_id)
+          : '?';
+      console.log('Telegram webhook update', updateId);
+    }
+    next();
+  });
   app.use('/bot/webhook', webhookCallback(bot, 'express'));
 }
