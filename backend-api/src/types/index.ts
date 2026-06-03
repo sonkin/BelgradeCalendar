@@ -2,6 +2,8 @@ export type UserRole = 'member' | 'admin';
 
 export type RsvpStatus = 'going' | 'maybe' | 'not_going';
 
+export type ReminderOffset = '1m' | '1d' | '2d' | '3d' | '7d' | '14d' | '30d';
+
 export interface TelegramWebAppUser {
   id: number;
   first_name: string;
@@ -56,6 +58,7 @@ export interface EventListItemDto {
   description: string | null;
   startsAt: string;
   timeUnset: boolean;
+  reminders: ReminderOffset[];
   durationMinutes: number | null;
   location: string | null;
   createdBy: ParticipantUserDto;
@@ -76,6 +79,7 @@ export interface CreateEventBody {
   title: string;
   startsAt: string;
   timeUnset?: boolean;
+  reminders?: ReminderOffset[];
   durationMinutes?: number | null;
   location?: string | null;
   description?: string | null;
@@ -85,6 +89,7 @@ export interface UpdateEventBody {
   title?: string;
   startsAt?: string;
   timeUnset?: boolean;
+  reminders?: ReminderOffset[];
   durationMinutes?: number | null;
   location?: string | null;
   description?: string | null;

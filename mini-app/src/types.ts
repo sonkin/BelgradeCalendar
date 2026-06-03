@@ -1,5 +1,7 @@
 export type RsvpStatus = 'going' | 'maybe' | 'not_going';
 
+export type ReminderOffset = '1m' | '1d' | '2d' | '3d' | '7d' | '14d' | '30d';
+
 export interface User {
   id: string;
   telegramId: number;
@@ -32,6 +34,7 @@ export interface EventListItem {
   description: string | null;
   startsAt: string;
   timeUnset: boolean;
+  reminders: ReminderOffset[];
   durationMinutes: number | null;
   location: string | null;
   createdBy: ParticipantUser;
@@ -45,6 +48,7 @@ export interface EventDetail {
   description: string | null;
   startsAt: string;
   timeUnset: boolean;
+  reminders: ReminderOffset[];
   durationMinutes: number | null;
   location: string | null;
   createdBy: ParticipantUser;
@@ -60,6 +64,7 @@ export interface CreateEventPayload {
   title: string;
   startsAt: string;
   timeUnset?: boolean;
+  reminders?: ReminderOffset[];
   durationMinutes?: number | null;
   location?: string | null;
   description?: string | null;
@@ -69,6 +74,7 @@ export interface UpdateEventPayload {
   title?: string;
   startsAt?: string;
   timeUnset?: boolean;
+  reminders?: ReminderOffset[];
   description?: string | null;
 }
 

@@ -6,11 +6,14 @@ import type {
   CreateEventBody,
   EventDetailDto,
   EventListItemDto,
+  ReminderOffset,
   RsvpStatus,
   UpdateEventBody,
 } from '../types/index.js';
 import { AppError } from '../utils/errors.js';
 import { toParticipantUserDto } from '../utils/participantDto.js';
+import { isReminderOffset, validateEventReminders } from '../utils/reminderOffsets.js';
+import { clearReminderSentForEvent } from './reminderService.js';
 import { postEventAnnouncement } from './telegramBot.js';
 import {
   belgradeMidnightOnSameDay,
@@ -20,6 +23,18 @@ import {
 
 function resolveStartsAt(startsAt: Date, timeUnset: boolean): Date {
   return timeUnset ? belgradeMidnightOnSameDay(startsAt) : startsAt;
+}
+
+function mapReminders(event: IEvent): ReminderOffset[] {
+  return (event.reminders ?? []).filter(isReminderOffset);
+}
+
+function validateRemindersForEvent(reminders: unknown, startsAt: Date): ReminderOffset[] {
+  try {
+    return validateEventReminders(reminders, startsAt);
+  } catch (error) {
+    throw new AppError(400, error instanceof Error ? error.message : 'Некорректные напоминания');
+  }
 }
 
 async function getParticipantsForList(
@@ -177,6 +192,7 @@ export async function listEvents(
       description: event.description ?? null,
       startsAt: event.startsAt.toISOString(),
       timeUnset: Boolean(event.timeUnset),
+      reminders: mapReminders(event),
       durationMinutes: event.durationMinutes ?? null,
       location: event.location ?? null,
       createdBy: toParticipantUserDto(creator),
@@ -222,6 +238,7 @@ export async function getEventById(eventId: string, currentUserId: string): Prom
     description: event.description ?? null,
     startsAt: event.startsAt.toISOString(),
     timeUnset: Boolean(event.timeUnset),
+    reminders: mapReminders(event),
     durationMinutes: event.durationMinutes ?? null,
     location: event.location ?? null,
     createdBy: toParticipantUserDto(creator),
@@ -234,12 +251,14 @@ export async function createEvent(body: CreateEventBody, user: IUser): Promise<E
   const title = validateTitle(body.title);
   const timeUnset = Boolean(body.timeUnset);
   const startsAt = resolveStartsAt(parseDate(body.startsAt, 'startsAt'), timeUnset);
+  const reminders = validateRemindersForEvent(body.reminders, startsAt);
   const durationMinutes = validateDuration(body.durationMinutes);
 
   const event = await Event.create({
     title,
     startsAt,
     timeUnset,
+    reminders,
     durationMinutes,
     location: body.location?.trim() || null,
     description: body.description?.trim() || null,
@@ -276,6 +295,9 @@ export async function updateEvent(
     throw new AppError(403, 'Недостаточно прав для редактирования события');
   }
 
+  const previousStartsAt = event.startsAt.getTime();
+  const previousRemindersKey = JSON.stringify(mapReminders(event));
+
   if (body.title !== undefined) {
     event.title = validateTitle(body.title);
   }
@@ -296,8 +318,19 @@ export async function updateEvent(
   if (body.description !== undefined) {
     event.description = body.description?.trim() || null;
   }
+  if (body.reminders !== undefined) {
+    event.reminders = validateRemindersForEvent(body.reminders, event.startsAt);
+  }
+
+  const scheduleChanged =
+    event.startsAt.getTime() !== previousStartsAt ||
+    JSON.stringify(mapReminders(event)) !== previousRemindersKey;
 
   await event.save();
+
+  if (scheduleChanged) {
+    await clearReminderSentForEvent(event._id.toString());
+  }
 
   return getEventById(event._id.toString(), user._id.toString());
 }

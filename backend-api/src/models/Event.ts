@@ -11,6 +11,14 @@ const eventSchema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     deletedAt: { type: Date, default: null, index: true },
     telegramMessageId: { type: Number, default: null },
+    reminders: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: (v: string[]) => Array.isArray(v) && v.length <= 2,
+        message: 'Не больше 2 напоминаний',
+      },
+    },
   },
   { timestamps: true },
 );

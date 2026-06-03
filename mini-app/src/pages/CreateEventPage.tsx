@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { createEvent } from '../api/client';
 import { DatetimeField } from '../components/DatetimeField';
 import { Layout } from '../components/Layout';
+import { ReminderFields } from '../components/ReminderFields';
 import { useEvents } from '../context/EventsContext';
 import { belgradePartsToPayload, defaultBelgradeDatetimeParts } from '../utils/dates';
+import type { ReminderOffset } from '../utils/reminders';
 
 export function CreateEventPage() {
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ export function CreateEventPage() {
   const [location, setLocation] = useState('');
   const [durationMinutes, setDurationMinutes] = useState('');
   const [description, setDescription] = useState('');
+  const [reminders, setReminders] = useState<ReminderOffset[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +32,7 @@ export function CreateEventPage() {
         location: location.trim() || null,
         description: description.trim() || null,
         durationMinutes: durationMinutes ? Number(durationMinutes) : null,
+        reminders,
       });
 
       if (document.activeElement instanceof HTMLElement) {
@@ -82,6 +86,8 @@ export function CreateEventPage() {
             placeholder="120"
           />
         </label>
+
+        <ReminderFields value={reminders} onChange={setReminders} />
 
         <label className="field">
           <span>Описание</span>

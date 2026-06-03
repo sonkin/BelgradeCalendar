@@ -53,6 +53,7 @@ export const config = {
   botWebhookUrl: process.env.BOT_WEBHOOK_URL ?? '',
   botUsePolling: resolveBotUsePolling(),
   timezone: process.env.TZ ?? 'Europe/Belgrade',
+  remindersEnabled: process.env.REMINDERS_ENABLED?.trim().toLowerCase() !== 'false',
 };
 
 export function miniAppDirectLink(startParam?: string): string {

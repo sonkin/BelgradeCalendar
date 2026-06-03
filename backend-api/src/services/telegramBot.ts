@@ -92,3 +92,44 @@ export async function postEventAnnouncement(event: IEvent, _creator: IUser): Pro
 
   return data.result.message_id;
 }
+
+export function formatEventReminderText(event: IEvent, leadPhrase: string): string {
+  const lines = [`⏰ Напоминание (${leadPhrase}):`, event.title, formatEventWhen(event)];
+
+  if (event.location) {
+    lines.push(`📍 ${event.location}`);
+  }
+
+  return lines.join('\n');
+}
+
+export async function postEventReminderToGroup(event: IEvent, leadPhrase: string): Promise<void> {
+  if (!config.telegramChatId) {
+    console.warn('TELEGRAM_CHAT_ID not set — skipping group reminder');
+    return;
+  }
+
+  const eventId = event._id.toString();
+  const payload: Record<string, unknown> = {
+    chat_id: config.telegramChatId,
+    text: formatEventReminderText(event, leadPhrase),
+  };
+
+  if (config.webappUrl.startsWith('https://')) {
+    payload.reply_markup = {
+      inline_keyboard: [[buildOpenCalendarButton(eventId)]],
+    };
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${config.botToken}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json()) as TelegramSendMessageResponse;
+
+  if (!data.ok) {
+    throw new Error(data.description ?? 'Telegram sendMessage failed');
+  }
+}

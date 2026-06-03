@@ -4,12 +4,14 @@ import { deleteEvent, fetchEvent, updateEvent } from '../api/client';
 import { EventDateTime } from '../components/EventDateTime';
 import { DatetimeField } from '../components/DatetimeField';
 import { Layout } from '../components/Layout';
+import { ReminderFields } from '../components/ReminderFields';
 import { ParticipantNameLink } from '../components/ParticipantNameLink';
 import { RsvpSection } from '../components/RsvpSection';
 import { useAuth } from '../context/AuthContext';
 import { useEvents } from '../context/EventsContext';
-import type { EventDetail, RsvpStatus } from '../types';
+import type { EventDetail, ReminderOffset, RsvpStatus } from '../types';
 import { belgradePartsToPayload, formatDuration, isoToBelgradeParts } from '../utils/dates';
+import { formatRemindersList } from '../utils/reminders';
 import { listItemToDetail } from '../utils/eventMappers';
 import { applyDetailRsvp, userAsParticipant } from '../utils/rsvp';
 
@@ -37,6 +39,7 @@ export function EventDetailPage() {
   const [editTitle, setEditTitle] = useState('');
   const [editStartsAt, setEditStartsAt] = useState({ date: '', time: '' });
   const [editDescription, setEditDescription] = useState('');
+  const [editReminders, setEditReminders] = useState<ReminderOffset[]>([]);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -86,6 +89,7 @@ export function EventDetailPage() {
     setEditTitle(event.title);
     setEditStartsAt(isoToBelgradeParts(event.startsAt, event.timeUnset));
     setEditDescription(event.description ?? '');
+    setEditReminders(event.reminders ?? []);
     setEditError(null);
     setEditing(true);
   };
@@ -113,6 +117,7 @@ export function EventDetailPage() {
         title,
         ...belgradePartsToPayload(editStartsAt),
         description: editDescription.trim() || null,
+        reminders: editReminders,
       });
       setEvent(updated);
       upsertEvent(updated);
@@ -186,6 +191,8 @@ export function EventDetailPage() {
 
             <DatetimeField value={editStartsAt} onChange={setEditStartsAt} />
 
+            <ReminderFields value={editReminders} onChange={setEditReminders} />
+
             <label className="field">
               <span>Описание</span>
               <textarea
@@ -216,6 +223,9 @@ export function EventDetailPage() {
             />
             {duration && <p className="event-detail__duration">⏱ {duration}</p>}
             {event.location && <p className="event-detail__location">📍 {event.location}</p>}
+            <p className="event-detail__reminders muted">
+              🔔 {formatRemindersList(event.reminders ?? [])}
+            </p>
             {event.description && <p className="event-detail__description">{event.description}</p>}
             <p className="event-detail__author">
               Организатор: <ParticipantNameLink user={event.createdBy} />

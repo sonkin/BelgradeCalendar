@@ -2,12 +2,14 @@ import { createApp } from './app.js';
 import { startTelegramBot, stopTelegramBot } from './bot/start.js';
 import { config } from './config.js';
 import { connectDb } from './db.js';
+import { startScheduler } from './scheduler.js';
 
 async function main() {
   await connectDb();
 
   const app = createApp();
   await startTelegramBot(app);
+  startScheduler();
 
   const server = app.listen(config.port, () => {
     console.log(`Server listening on port ${config.port} (API + Telegram bot)`);

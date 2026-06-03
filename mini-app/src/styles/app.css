@@ -581,7 +581,9 @@ textarea {
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.field select,
+.reminder-fields select {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 12px;
@@ -589,6 +591,27 @@ textarea {
   background: var(--app-secondary-bg);
   color: var(--app-text);
   font-size: 16px;
+}
+
+.reminder-fields {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reminder-fields__legend {
+  font-size: 14px;
+  color: var(--app-hint);
+  padding: 0;
+  margin-bottom: 4px;
+}
+
+.reminder-fields__hint {
+  margin: 0 0 4px;
+  font-size: 13px;
 }
 
 .field textarea {
