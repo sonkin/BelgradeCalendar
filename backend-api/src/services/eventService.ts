@@ -326,7 +326,7 @@ export async function upsertRsvp(
 
   await EventParticipant.findOneAndUpdate(
     { eventId: new mongoose.Types.ObjectId(eventId), userId: user._id },
-    { status },
+    { $set: { status } },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
 

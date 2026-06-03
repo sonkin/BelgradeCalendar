@@ -56,7 +56,7 @@ function AppRoutes() {
   }
 
   return (
-    <EventsProvider enabled={Boolean(user) || hasToken}>
+    <EventsProvider enabled={Boolean(user)}>
       <StartParamRedirect />
       <Routes>
         <Route path="/" element={<EventListPage />} />

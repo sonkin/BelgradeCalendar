@@ -79,7 +79,12 @@ export function EventsProvider({
   const inFlightRsvpRef = useRef<Map<string, Promise<EventDetail>>>(new Map());
   const savedDetailRef = useRef<Map<string, EventDetail>>(new Map());
   const rsvpSeqRef = useRef<Map<string, number>>(new Map());
+  const refreshSeqRef = useRef(0);
   const savedMessageTimersRef = useRef<Map<string, number>>(new Map());
+
+  const invalidateRefresh = useCallback(() => {
+    refreshSeqRef.current += 1;
+  }, []);
 
   const setRsvpPhase = useCallback((eventId: string, phase: RsvpSavePhase) => {
     setRsvpPhases((prev) => ({ ...prev, [eventId]: phase }));
@@ -119,15 +124,24 @@ export function EventsProvider({
   }, []);
 
   const refresh = useCallback(async () => {
+    const seq = ++refreshSeqRef.current;
     setError(null);
     try {
       await waitForPendingRsvps();
       const data = await fetchEvents(listFromDate());
+      if (refreshSeqRef.current !== seq) {
+        return;
+      }
       persist(data);
     } catch (err) {
+      if (refreshSeqRef.current !== seq) {
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Не удалось загрузить события');
     } finally {
-      setInitialLoading(false);
+      if (refreshSeqRef.current === seq) {
+        setInitialLoading(false);
+      }
     }
   }, [persist, waitForPendingRsvps]);
 
@@ -155,6 +169,7 @@ export function EventsProvider({
   const upsertEvent = useCallback((event: EventListItem | EventDetail) => {
     const item = isEventDetail(event) ? detailToListItem(event) : event;
 
+    invalidateRefresh();
     setEvents((prev) => {
       const next = sortEventsByStart(
         [...prev.filter((existing) => existing.id !== item.id), item].filter(isUpcomingEvent),
@@ -162,15 +177,16 @@ export function EventsProvider({
       writeCache(next);
       return next;
     });
-  }, []);
+  }, [invalidateRefresh]);
 
   const removeEvent = useCallback((id: string) => {
+    invalidateRefresh();
     setEvents((prev) => {
       const next = prev.filter((event) => event.id !== id);
       writeCache(next);
       return next;
     });
-  }, []);
+  }, [invalidateRefresh]);
 
   const replaceEvents = useCallback((updater: (events: EventListItem[]) => EventListItem[]) => {
     setEvents((prev) => {
@@ -197,6 +213,12 @@ export function EventsProvider({
 
   const mergeFetchedEventDetail = useCallback(
     (fetched: EventDetail, user: User): EventDetail => {
+      const inFlight = inFlightRsvpRef.current.has(fetched.id);
+      const phase = rsvpPhases[fetched.id];
+      if (!inFlight && phase !== 'saving' && phase !== 'saved') {
+        return fetched;
+      }
+
       const local = events.find((event) => event.id === fetched.id);
       if (!local?.myRsvp || local.myRsvp === fetched.myRsvp) {
         return fetched;
@@ -204,7 +226,7 @@ export function EventsProvider({
 
       return applyDetailRsvp(fetched, userAsParticipant(user), local.myRsvp);
     },
-    [events],
+    [events, rsvpPhases],
   );
 
   const saveRsvp = useCallback(
@@ -214,27 +236,37 @@ export function EventsProvider({
 
       replaceEvents((prev) => {
         const current = prev.find((event) => event.id === eventId);
-        if (!current || current.myRsvp === status) return prev;
+        if (current?.myRsvp === status) {
+          return prev;
+        }
 
         shouldSave = true;
-        snapshot = {
-          ...current,
-          participants: {
-            going: [...current.participants.going],
-            maybe: [...current.participants.maybe],
-          },
-        };
 
-        return prev.map((event) =>
-          event.id === eventId ? applyListRsvp(current, userAsParticipant(user), status) : event,
-        );
+        if (current) {
+          snapshot = {
+            ...current,
+            participants: {
+              going: [...current.participants.going],
+              maybe: [...current.participants.maybe],
+            },
+          };
+
+          return prev.map((event) =>
+            event.id === eventId ? applyListRsvp(current, userAsParticipant(user), status) : event,
+          );
+        }
+
+        return prev;
       });
 
-      if (!shouldSave || !snapshot) return null;
+      if (!shouldSave) {
+        return null;
+      }
 
       const seq = (rsvpSeqRef.current.get(eventId) ?? 0) + 1;
       rsvpSeqRef.current.set(eventId, seq);
 
+      invalidateRefresh();
       clearSavedMessageTimer(eventId);
       setRsvpPhase(eventId, 'saving');
 
@@ -258,8 +290,12 @@ export function EventsProvider({
           return null;
         }
 
-        const rollback = snapshot;
-        replaceEvents((prev) => prev.map((event) => (event.id === eventId ? rollback : event)));
+        if (snapshot) {
+          const rollback = snapshot;
+          replaceEvents((prev) => prev.map((event) => (event.id === eventId ? rollback : event)));
+        } else {
+          void refresh();
+        }
         setRsvpPhase(eventId, 'idle');
         WebApp.showAlert('Не удалось сохранить ответ');
         return null;
@@ -271,6 +307,8 @@ export function EventsProvider({
     },
     [
       clearSavedMessageTimer,
+      invalidateRefresh,
+      refresh,
       replaceEvents,
       scheduleSavedMessageReset,
       setRsvpPhase,
