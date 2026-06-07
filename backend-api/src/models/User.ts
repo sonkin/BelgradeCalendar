@@ -10,7 +10,8 @@ const userSchema = new Schema(
     displayName: { type: String, default: null, trim: true, maxlength: 100 },
     photoUrl: { type: String, default: null },
     role: { type: String, enum: ['member', 'admin'] satisfies UserRole[], required: true },
-    calendarFeedToken: { type: String, default: null, unique: true, sparse: true, index: true },
+    // Без default: null — иначе unique+sparse всё равно конфликтует на втором null
+    calendarFeedToken: { type: String, unique: true, sparse: true },
   },
   { timestamps: true },
 );

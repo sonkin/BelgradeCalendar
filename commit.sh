@@ -1,3 +1,3 @@
 git add .
-git commit -m "logo icon added"
+git commit -m "fixed duplicate user with calendarFeedToken"
 git push
